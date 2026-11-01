@@ -20,16 +20,6 @@ export const KIND_PLURAL: Record<ItemKind, string> = {
   other: 'Другое',
 };
 
-export const KIND_ICON: Record<ItemKind, string> = {
-  food: '🍽',
-  drink: '☕',
-  med: '💊',
-  supplement: '🌿',
-  symptom: '🩹',
-  activity: '🚶',
-  other: '•',
-};
-
 export const MOOD_LABELS = ['очень плохо', 'плохо', 'так себе', 'хорошо', 'отлично'];
 export const ENERGY_LABELS = ['нет сил', 'мало', 'средне', 'бодро', 'очень бодро'];
 export const STRESS_LABELS = ['спокойно', 'немного', 'средне', 'сильно', 'очень сильно'];

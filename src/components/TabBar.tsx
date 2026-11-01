@@ -1,10 +1,12 @@
+import { Icon } from './Icon';
+
 export type Tab = 'today' | 'calendar' | 'insights' | 'more';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'today', label: 'Сегодня', icon: '◉' },
-  { id: 'calendar', label: 'Календарь', icon: '▦' },
-  { id: 'insights', label: 'Анализ', icon: '◇' },
-  { id: 'more', label: 'Ещё', icon: '⋯' },
+  { id: 'today', label: 'Сегодня', icon: 'today' },
+  { id: 'calendar', label: 'Календарь', icon: 'calendar' },
+  { id: 'insights', label: 'Анализ', icon: 'insights' },
+  { id: 'more', label: 'Ещё', icon: 'more' },
 ];
 
 export function TabBar({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
@@ -18,9 +20,7 @@ export function TabBar({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void
           aria-current={tab === t.id ? 'page' : undefined}
           onClick={() => onChange(t.id)}
         >
-          <span class="tab-icon" aria-hidden="true">
-            {t.icon}
-          </span>
+          <Icon name={t.icon} size={25} />
           <span>{t.label}</span>
         </button>
       ))}

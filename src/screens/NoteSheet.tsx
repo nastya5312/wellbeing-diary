@@ -12,7 +12,8 @@ export function NoteSheet({ date, onClose }: { date: string; onClose: () => void
 
   useEffect(() => {
     void safe(() => getDay(getDb(), date)).then((d) => {
-      setNote(d?.note ?? '');
+      // Если уже начала печатать до загрузки — не стираем
+      setNote((typed) => typed || (d?.note ?? ''));
       setLoaded(true);
     });
   }, [date]);

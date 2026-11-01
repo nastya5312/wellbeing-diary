@@ -50,9 +50,11 @@ export function App() {
     <div class="app">
       {isDemo() && (
         <div class="demo-bar no-print" role="status">
-          <b>ДЕМО</b> · вымышленные данные, твои записи не видны и не меняются
+          <span>
+            <b>Демо-режим.</b> Вымышленные данные, твои записи скрыты и не меняются.
+          </span>
           <button type="button" class="btn btn-small" onClick={() => void exitDemo()}>
-            Удалить демо
+            Выйти
           </button>
         </div>
       )}

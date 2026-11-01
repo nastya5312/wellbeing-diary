@@ -11,13 +11,14 @@ import { medIntervals } from '../lib/intervals';
 import { SwipeRow } from '../components/SwipeRow';
 import { Checklist } from '../components/Checklist';
 import { DailyMetrics } from '../components/DailyMetrics';
+import { Icon, IconBadge } from '../components/Icon';
 import { useLive } from '../lib/useLive';
 import { safe, notify } from '../lib/notify';
 import { cycleDay } from '../lib/cycle';
 import { backupOverdue } from '../lib/backup';
 import { BACKUP_REMIND_DAYS } from '../db/defaults';
 import { addDays, formatDateLong, formatDuration, localTime, tsFromDiaryDate, weekdayRu } from '../lib/dates';
-import { BRISTOL_LABELS, ENERGY_LABELS, INTENSITY_LABELS, KIND_ICON, MOOD_LABELS, QUALITY_LABELS, STRESS_LABELS } from '../lib/labels';
+import { ENERGY_LABELS, FLOW_LABELS, INTENSITY_LABELS, MOOD_LABELS, QUALITY_LABELS } from '../lib/labels';
 
 type Open =
   | { type: 'add'; kind?: ItemKind }
@@ -25,13 +26,46 @@ type Open =
   | { type: 'sleep' | 'evening' | 'note' | 'stool'; date: string }
   | null;
 
-const ADD_TILES: { kind: ItemKind; label: string }[] = [
-  { kind: 'food', label: 'Еда' },
-  { kind: 'drink', label: 'Напиток' },
-  { kind: 'med', label: 'Лекарство' },
-  { kind: 'supplement', label: 'Добавка' },
-  { kind: 'symptom', label: 'Симптом' },
+const QUICK: { kind?: ItemKind; label: string; icon: string }[] = [
+  { kind: 'food', label: 'Еда', icon: 'food' },
+  { kind: 'drink', label: 'Напиток', icon: 'drink' },
+  { kind: 'med', label: 'Лекарство', icon: 'med' },
+  { kind: 'supplement', label: 'Добавка', icon: 'supplement' },
+  { kind: 'symptom', label: 'Симптом', icon: 'symptom' },
+  { label: 'Другое', icon: 'other' },
 ];
+
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** Кольцо прогресса: сколько из четырёх отметок дня внесено. */
+function DayRing({ done, total, completed }: { done: number; total: number; completed: boolean }) {
+  const r = 26;
+  const c = 2 * Math.PI * r;
+  const part = completed ? 1 : done / total;
+  return (
+    <div
+      class={`ring${completed ? ' ring-done' : ''}`}
+      role="img"
+      aria-label={completed ? 'День заполнен' : `Отмечено ${done} из ${total}`}
+    >
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <circle class="ring-track" cx="32" cy="32" r={r} fill="none" stroke-width="7" />
+        <circle
+          class="ring-fill"
+          cx="32"
+          cy="32"
+          r={r}
+          fill="none"
+          stroke-width="7"
+          stroke-linecap="round"
+          stroke-dasharray={c}
+          stroke-dashoffset={c * (1 - part)}
+        />
+      </svg>
+      <span class="ring-label">{completed ? <Icon name="check" size={24} /> : `${done}/${total}`}</span>
+    </div>
+  );
+}
 
 // Экран дня. Для сегодняшнего дня — с напоминаниями; для прошлых (из календаря) — с кнопкой «Назад».
 export function Today({ date, today, settings, onOpenBackup, onOpenCatalog, onBack }: {
@@ -61,162 +95,167 @@ export function Today({ date, today, settings, onOpenBackup, onOpenCatalog, onBa
   const toggleCompleted = async () => {
     const completed = !day?.completed;
     const ok = await safe(async () => (await saveDay(db, date, { completed }), true));
-    if (ok) notify(completed ? 'День отмечен заполненным' : 'Отметка снята');
+    if (ok) notify(completed ? 'День заполнен — он попадёт в анализ' : 'Отметка «День заполнен» снята');
   };
 
   const intervals = events && items ? medIntervals(events, items) : [];
   const sleep = day?.sleep;
   const wb = day?.wellbeing;
+  const hasWb = !!(wb?.mood || wb?.energy || wb?.stress || day?.flow);
+
+  const checkins = [
+    {
+      key: 'sleep' as const,
+      label: 'Сон',
+      icon: 'moon',
+      tone: 'sleep',
+      done: !!sleep,
+      value: sleep?.durationMin !== undefined ? formatDuration(sleep.durationMin) : sleep ? `${sleep.bedtime ?? '…'}–${sleep.wake ?? '…'}` : null,
+      sub: sleep?.quality ? `качество: ${QUALITY_LABELS[sleep.quality - 1]}` : sleep ? 'качество не указано' : null,
+      empty: 'Как спала?',
+    },
+    {
+      key: 'evening' as const,
+      label: 'Самочувствие',
+      icon: 'mood',
+      tone: 'mood',
+      done: hasWb,
+      value: wb?.mood ? cap(MOOD_LABELS[wb.mood - 1]!) : hasWb ? 'Отмечено' : null,
+      sub: wb?.energy ? `энергия: ${ENERGY_LABELS[wb.energy - 1]}` : day?.flow ? `месячные: ${FLOW_LABELS[day.flow]}` : null,
+      empty: 'Настроение, энергия',
+    },
+    {
+      key: 'stool' as const,
+      label: 'Стул',
+      icon: 'stool',
+      tone: 'stool',
+      done: !!day?.stool,
+      value: day?.stool ? (day.stool.count === 0 ? 'Не было' : `${day.stool.count >= 5 ? '5+' : day.stool.count} раз`) : null,
+      sub: day?.stool?.type ? `тип ${day.stool.type} по шкале` : null,
+      empty: 'Сколько раз',
+    },
+    {
+      key: 'note' as const,
+      label: 'Заметка',
+      icon: 'note',
+      tone: 'note',
+      done: !!day?.note,
+      value: day?.note ? (day.note.length > 38 ? `${day.note.slice(0, 36).trim()}…` : day.note) : null,
+      sub: null,
+      empty: 'Что было необычного',
+    },
+  ];
+  const doneCount = checkins.filter((c) => c.done).length;
 
   return (
     <div class="screen">
-      <header class={`screen-head${onBack ? ' row center' : ''}`}>
-        {onBack && (
-          <button type="button" class="icon-btn" onClick={onBack} aria-label="Назад к календарю">
-            ‹
-          </button>
-        )}
-        <div>
-        <h1>
-          {isToday ? 'Сегодня, ' : ''}
-          {formatDateLong(date)}
-          {!isToday && date.slice(0, 4) !== today.slice(0, 4) ? ` ${date.slice(0, 4)}` : ''}
-        </h1>
-        <p class="muted">
-          {weekdayRu(date)}
-          {cycle ? ` · день цикла ${cycle}` : ''}
-          {!isToday && ' · запись задним числом'}
-        </p>
+      <header class="day-head">
+        <div class="grow">
+          {onBack ? (
+            <button type="button" class="icon-btn back-btn" onClick={onBack} aria-label="Назад к календарю">
+              <Icon name="back" size={20} /> Календарь
+            </button>
+          ) : (
+            <p class="day-kicker">Сегодня</p>
+          )}
+          <h1 class="day-title">
+            {formatDateLong(date)}
+            {!isToday && date.slice(0, 4) !== today.slice(0, 4) ? ` ${date.slice(0, 4)}` : ''}
+          </h1>
+          <div class="day-meta">
+            <span class="pill">{cap(weekdayRu(date))}</span>
+            {cycle ? (
+              <span class="pill tone-cycle">
+                <Icon name="drop" size={14} /> День цикла {cycle}
+              </span>
+            ) : null}
+            {!isToday && <span class="pill">Запись задним числом</span>}
+          </div>
         </div>
+        <DayRing done={doneCount} total={checkins.length} completed={!!day?.completed} />
       </header>
 
       {needBackup && onOpenBackup && (
         <button type="button" class="banner" onClick={onOpenBackup}>
-          {settings.lastExportAt === undefined
-            ? 'Резервной копии ещё нет. '
-            : `Последняя копия была больше ${BACKUP_REMIND_DAYS} дней назад. `}
-          <u>Сохранить копию</u>
+          <IconBadge name="backup" tone="warn" size={32} />
+          <span class="grow">
+            {settings.lastExportAt === undefined ? 'Резервной копии ещё нет.' : `Копии нет больше ${BACKUP_REMIND_DAYS} дней.`}{' '}
+            <u>Сохранить копию</u>
+          </span>
+          <Icon name="chevron" size={18} class="chev" />
         </button>
       )}
 
       {yesterday && (
-        <button type="button" class="banner" onClick={() => setOpen({ type: 'evening', date: yesterday })}>
-          Вчера не отмечен. <u>Заполнить?</u>
+        <button type="button" class="banner banner-info" onClick={() => setOpen({ type: 'evening', date: yesterday })}>
+          <IconBadge name="calendar" tone="accent" size={32} />
+          <span class="grow">
+            Вчерашний день не отмечен заполненным. <u>Заполнить</u>
+          </span>
+          <Icon name="chevron" size={18} class="chev" />
         </button>
       )}
 
+      <section class="checkins" aria-label="Отметки дня">
+        {checkins.map((c) => (
+          <button type="button" key={c.key} class="checkin" onClick={() => setOpen({ type: c.key, date })}>
+            <IconBadge name={c.icon} tone={c.tone} size={36} />
+            {c.done && (
+              <span class="checkin-done" aria-hidden="true">
+                <Icon name="check" size={14} />
+              </span>
+            )}
+            <span class="checkin-text">
+              <span class="checkin-label">{c.label}</span>
+              {c.value ? (
+                <span class="checkin-value">{c.value}</span>
+              ) : (
+                <span class="checkin-value empty">{c.empty}</span>
+              )}
+              {c.sub && <span class="checkin-sub">{c.sub}</span>}
+            </span>
+          </button>
+        ))}
+      </section>
+
       {items && events && courses && (
-        <Checklist
-          date={date}
-          tsFor={() => (isToday ? Date.now() : tsFromDiaryDate(date, '12:00', settings.dayStartsAt))}
-          items={[...items.values()]} events={events} courses={courses} onEmptyHint={onOpenCatalog}
-          dayStartsAt={settings.dayStartsAt} />
+        <>
+          <h2 class="section-title">Чек-лист</h2>
+          <Checklist
+            date={date}
+            tsFor={() => (isToday ? Date.now() : tsFromDiaryDate(date, '12:00', settings.dayStartsAt))}
+            items={[...items.values()]}
+            events={events}
+            courses={courses}
+            onEmptyHint={onOpenCatalog}
+            dayStartsAt={settings.dayStartsAt}
+          />
+        </>
       )}
+
+      <h2 class="section-title">Добавить запись</h2>
+      <div class="quick-row">
+        {QUICK.map((q) => (
+          <button type="button" key={q.label} class="quick" onClick={() => setOpen({ type: 'add', kind: q.kind })}>
+            <IconBadge name={q.icon} tone={q.kind ?? 'other'} size={48} />
+            <span>{q.label}</span>
+          </button>
+        ))}
+      </div>
 
       <DailyMetrics date={date} />
 
-      <h2 class="section-title">Добавить</h2>
-      <div class="tiles">
-        <button type="button" class="tile" onClick={() => setOpen({ type: 'sleep', date: date })}>
-          <span class="tile-icon" aria-hidden="true">🌙</span>
-          <span>Сон</span>
-        </button>
-        <button type="button" class="tile" onClick={() => setOpen({ type: 'evening', date: date })}>
-          <span class="tile-icon" aria-hidden="true">🙂</span>
-          <span>Самочувствие</span>
-        </button>
-        {ADD_TILES.map((t) => (
-          <button type="button" key={t.kind} class="tile" onClick={() => setOpen({ type: 'add', kind: t.kind })}>
-            <span class="tile-icon" aria-hidden="true">{KIND_ICON[t.kind]}</span>
-            <span>{t.label}</span>
-          </button>
-        ))}
-        <button type="button" class="tile" onClick={() => setOpen({ type: 'stool', date: date })}>
-          <span class="tile-icon" aria-hidden="true">🧻</span>
-          <span>Стул</span>
-        </button>
-        <button type="button" class="tile" onClick={() => setOpen({ type: 'note', date: date })}>
-          <span class="tile-icon" aria-hidden="true">✎</span>
-          <span>Заметка</span>
-        </button>
-      </div>
-      <button type="button" class="btn btn-link" onClick={() => setOpen({ type: 'add' })}>
-        + Другое событие (активность и прочее)
-      </button>
-
-      {(sleep || wb || day?.flow || day?.note || day?.stool || intervals.length > 0) && (
-        <section class="cards">
-          {sleep && (
-            <button type="button" class="card" onClick={() => setOpen({ type: 'sleep', date: date })}>
-              <span class="card-title">🌙 Сон</span>
-              <span>
-                {sleep.bedtime}–{sleep.wake}
-                {sleep.durationMin !== undefined && ` · ${formatDuration(sleep.durationMin)}`}
-              </span>
-              <span class="muted small">
-                {sleep.quality ? `качество: ${QUALITY_LABELS[sleep.quality - 1]}` : 'качество не указано'}
-                {sleep.awakenings ? ` · пробуждений: ${sleep.awakenings}` : ''}
-              </span>
-            </button>
-          )}
-          {(wb || day?.flow) && (
-            <button type="button" class="card" onClick={() => setOpen({ type: 'evening', date: date })}>
-              <span class="card-title">🙂 Самочувствие</span>
-              <span class="small">
-                {[
-                  wb?.mood && `настроение: ${MOOD_LABELS[wb.mood - 1]}`,
-                  wb?.energy && `энергия: ${ENERGY_LABELS[wb.energy - 1]}`,
-                  wb?.stress && `стресс: ${STRESS_LABELS[wb.stress - 1]}`,
-                  day?.flow ? `месячные: ${day.flow}/3` : '',
-                ]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </span>
-            </button>
-          )}
-          {day?.stool && (
-            <button type="button" class="card" onClick={() => setOpen({ type: 'stool', date: date })}>
-              <span class="card-title">🧻 Стул</span>
-              <span class="small">
-                {day.stool.count === 0 ? 'не было' : `${day.stool.count >= 5 ? '5+' : day.stool.count} раз`}
-                {day.stool.type ? ` · тип ${day.stool.type}: ${BRISTOL_LABELS[day.stool.type - 1]}` : ''}
-              </span>
-            </button>
-          )}
-          {intervals.length > 0 && (
-            <div class="card">
-              <span class="card-title">⏱ Интервалы после лекарств</span>
-              {intervals.map((iv) => (
-                <span key={iv.eventId} class="small">
-                  {iv.medName} {iv.medTime} →{' '}
-                  {iv.next ? `${iv.next.name} ${iv.next.time} (через ${formatDuration(iv.next.minutes)})` : 'дальше еды и напитков в этот день нет'}
-                </span>
-              ))}
-              <span class="muted small">Первая еда или напиток (кроме воды) после приёма. Время меняется касанием записи ниже.</span>
-            </div>
-          )}
-          {day?.note && (
-            <button type="button" class="card" onClick={() => setOpen({ type: 'note', date: date })}>
-              <span class="card-title">✎ Заметка</span>
-              <span class="small pre">{day.note}</span>
-            </button>
-          )}
-        </section>
+      <h2 class="section-title">Записи за день</h2>
+      {events && events.length === 0 && (
+        <p class="muted section-note">Пока пусто. Отметь что-нибудь в чек-листе или добавь запись кнопками выше.</p>
       )}
-
-      <section>
-        <h2 class="section-title">Записи за день</h2>
-        {events && events.length === 0 && <p class="muted">Пока пусто. Добавь первое событие плитками выше.</p>}
-        {events && events.length > 0 && (
-          <ul class="list events">
+      {events && events.length > 0 && (
+        <>
+          <ul class="timeline">
             {events.map((ev) => {
               const it = items?.get(ev.itemId);
               const name = it?.name ?? 'удалённая позиция';
-              const details = [
-                ev.intensity && INTENSITY_LABELS[ev.intensity - 1],
-                ev.amountText,
-                ev.note,
-              ].filter(Boolean);
+              const details = [ev.intensity && INTENSITY_LABELS[ev.intensity - 1], ev.amountText, ev.note].filter(Boolean);
               return (
                 <li key={ev.id}>
                   <SwipeRow
@@ -227,28 +266,56 @@ export function Today({ date, today, settings, onOpenBackup, onOpenCatalog, onBa
                     }
                   >
                     <span class="ev-time">{localTime(ev.ts)}</span>
-                    <span class="ev-icon" aria-hidden="true">{KIND_ICON[ev.kind]}</span>
-                    <span class="ev-body">
+                    <span class="ev-icon">
+                      <IconBadge name={ev.kind} tone={ev.kind} size={30} />
+                    </span>
+                    <span class="ev-body grow">
                       <span>{name}</span>
-                      {details.length > 0 && <span class="muted small">{details.join(' · ')}</span>}
+                      {details.length > 0 && <span class="muted small">{details.join(', ')}</span>}
                     </span>
                   </SwipeRow>
                 </li>
               );
             })}
           </ul>
-        )}
-        {events && events.length > 0 && <p class="muted small">Свайп влево — удалить, касание — изменить.</p>}
-      </section>
+          <p class="muted small section-note">Касание — изменить, смахивание влево — удалить.</p>
+        </>
+      )}
 
-      <button
-        type="button"
-        class={`btn btn-block btn-complete${day?.completed ? ' done' : ' btn-primary'}`}
-        aria-pressed={!!day?.completed}
-        onClick={toggleCompleted}
-      >
-        {day?.completed ? '✓ День заполнен (нажми, чтобы снять)' : 'День заполнен'}
-      </button>
+      {intervals.length > 0 && (
+        <div class="card">
+          <span class="card-title">
+            <IconBadge name="clock" tone="med" size={28} /> Интервалы после лекарств
+          </span>
+          {intervals.map((iv) => (
+            <span key={iv.eventId} class="small">
+              {iv.medName}, {iv.medTime} →{' '}
+              {iv.next ? `${iv.next.name}, ${iv.next.time} (через ${formatDuration(iv.next.minutes)})` : 'еды и напитков после не было'}
+            </span>
+          ))}
+          <span class="muted small">Считается первая еда или напиток, кроме воды.</span>
+        </div>
+      )}
+
+      <section class={`finish${day?.completed ? ' done' : ''}`}>
+        <span class="finish-title">
+          {day?.completed ? <Icon name="check" size={22} /> : <Icon name="sparkle" size={22} />}
+          {day?.completed ? 'День заполнен' : 'Всё внесла за день?'}
+        </span>
+        <p class="muted small">
+          {day?.completed
+            ? 'День учитывается в анализе. Можно дописывать — отметка останется.'
+            : 'В анализ попадают только заполненные дни: так приложение отличает «не было» от «не записала».'}
+        </p>
+        <button
+          type="button"
+          class={`btn btn-block btn-large${day?.completed ? '' : ' btn-primary'}`}
+          aria-pressed={!!day?.completed}
+          onClick={toggleCompleted}
+        >
+          {day?.completed ? 'Снять отметку' : 'День заполнен'}
+        </button>
+      </section>
 
       {open?.type === 'add' && <QuickAdd settings={settings} date={date} kind={open.kind} onClose={close} />}
       {open?.type === 'edit' && <QuickAdd settings={settings} date={date} edit={open} onClose={close} />}

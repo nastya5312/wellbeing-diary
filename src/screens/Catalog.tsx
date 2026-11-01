@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import { ITEM_KINDS, type Item, type ItemKind } from '../models/types';
+import { Icon } from '../components/Icon';
 import { getDb } from '../db/schema';
 import { addItem, countItemEvents, deleteItem, listItems, mergeItems, updateItem } from '../db/repo';
 import { Sheet } from '../components/Sheet';
@@ -35,8 +36,8 @@ export function Catalog({ onBack }: { onBack: () => void }) {
   return (
     <div class="screen">
       <header class="screen-head row center">
-        <button type="button" class="icon-btn" onClick={onBack} aria-label="Назад">
-          ‹
+        <button type="button" class="icon-btn round" onClick={onBack} aria-label="Назад">
+          <Icon name="back" size={20} />
         </button>
         <h1>Справочник</h1>
       </header>

@@ -1,6 +1,6 @@
 {
   "name": "wellbeing-diary",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Дневник самочувствия — личное PWA",
   "scripts": {
     "test": "TZ=Europe/Minsk vitest run",

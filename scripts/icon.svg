@@ -1,10 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Иконка «Дневник»: тетрадь с линией самочувствия. Фон без скруглений — iOS скругляет сам. -->
-  <rect width="512" height="512" fill="#2f6f62"/>
-  <rect x="136" y="116" width="240" height="280" rx="28" fill="#f6f5f1"/>
-  <rect x="136" y="116" width="36" height="280" rx="14" fill="#d9e8e3"/>
-  <polyline points="196,268 236,268 258,216 286,318 310,248 330,268 352,268"
-            fill="none" stroke="#2f6f62" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
-  <line x1="196" y1="170" x2="340" y2="170" stroke="#b9c9c3" stroke-width="12" stroke-linecap="round"/>
-  <line x1="196" y1="350" x2="300" y2="350" stroke="#b9c9c3" stroke-width="12" stroke-linecap="round"/>
+  <!-- Иконка «Дневник»: кольцо прогресса дня с линией самочувствия. Фон без скруглений — iOS скругляет сам. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6a5ff0"/>
+      <stop offset="1" stop-color="#3b30a6"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#ffffff" stroke-opacity="0.22" stroke-width="34"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#ffffff" stroke-width="34" stroke-linecap="round"
+          stroke-dasharray="706.9 942.5" transform="rotate(-90 256 256)"/>
+  <polyline points="176,262 214,262 236,212 266,316 290,240 308,262 340,262"
+            fill="none" stroke="#ffffff" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

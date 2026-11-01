@@ -4,6 +4,7 @@ import { getDb } from '../db/schema';
 import { enableDailyMetric, listDailyMetrics, listMeasurementsByDate, parseNumberRu, setDailyValue, updateMetric } from '../db/courses';
 import { DAILY_METRIC_SUGGESTIONS } from '../db/defaults';
 import { Sheet } from './Sheet';
+import { Icon, IconBadge } from './Icon';
 import { useLive } from '../lib/useLive';
 import { notify, safe } from '../lib/notify';
 
@@ -24,26 +25,38 @@ export function DailyMetrics({ date }: { date: string }) {
   if (!metrics || !values) return null;
 
   return (
-    <section>
+    <section class="screen" style={{ gap: '16px' }}>
       <h2 class="section-title">Измерения</h2>
-      {metrics.length > 0 && (
-        <ul class="list">
-          {metrics.map((m) => {
-            const v = values.get(m.id);
-            return (
-              <li key={m.id}>
-                <button type="button" class="list-btn metric-row" onClick={() => setEditing(m)}>
-                  <span class="grow">{m.name}</span>
-                  <span class={v ? '' : 'muted'}>{v ? `${num(v.value)} ${m.unit}` : 'внести'}</span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-      <button type="button" class="btn btn-link" onClick={() => setChoosing(true)}>
-        {metrics.length ? '+ Изменить список измерений' : '+ Вес, пульс и другие ежедневные измерения'}
-      </button>
+      <div class="group">
+        {metrics.map((m) => {
+          const v = values.get(m.id);
+          return (
+            <button type="button" key={m.id} class="row-btn" onClick={() => setEditing(m)}>
+              <IconBadge name="metric" tone="metric" size={30} />
+              <span class="row-main">
+                <span class="row-title">{m.name}</span>
+              </span>
+              {v ? (
+                <span class="row-value">
+                  {num(v.value)} <span class="muted small">{m.unit}</span>
+                </span>
+              ) : (
+                <span class="row-value empty">Внести</span>
+              )}
+              <Icon name="chevron" size={16} class="chev" />
+            </button>
+          );
+        })}
+        <button type="button" class="row-btn" onClick={() => setChoosing(true)}>
+          <IconBadge name="plus" tone="accent" size={30} />
+          <span class="row-main">
+            <span class="row-title" style={{ color: 'var(--accent)' }}>
+              {metrics.length ? 'Изменить список измерений' : 'Вес, пульс и другие измерения'}
+            </span>
+            {!metrics.length && <span class="row-sub">Выбери, что вносить каждый день</span>}
+          </span>
+        </button>
+      </div>
       {editing && (
         <ValueSheet metric={editing} date={date} current={values.get(editing.id)} onClose={() => setEditing(null)} />
       )}

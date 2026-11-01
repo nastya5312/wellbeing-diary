@@ -1,3 +1,4 @@
+import { Icon, IconBadge } from './Icon';
 import { useEffect, useState } from 'preact/hooks';
 
 // Разрешила ли система постоянное хранение и сколько места занято.
@@ -23,16 +24,28 @@ export function StorageStatus() {
   const standalone =
     window.matchMedia?.('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true;
 
+  const ok = state.persisted === true && standalone;
   return (
-    <section class="panel small">
-      <h2>Хранилище</h2>
-      <p>
-        Защита от автоочистки:{' '}
-        {state.persisted === null ? 'неизвестно' : state.persisted ? 'включена системой ✓' : 'система не подтвердила'}
-      </p>
-      <p>Открыто как: {standalone ? 'приложение с экрана «Домой» ✓' : 'страница в браузере — вноси записи через иконку'}</p>
-      {state.usedMb !== null && <p>Занято: {state.usedMb < 1 ? 'меньше 1' : state.usedMb.toFixed(1)} МБ</p>}
-      <p class="muted">Даже при включённой защите копия в «Файлах» обязательна.</p>
-    </section>
+    <details class="group storage">
+      <summary class="row-btn">
+        <IconBadge name="shield" tone={ok ? 'med' : 'warn'} size={34} />
+        <span class="row-main">
+          <span class="row-title">Хранилище</span>
+          <span class="row-sub">
+            {ok ? 'Данные защищены от автоочистки' : 'Проверь, как открыто приложение'}
+            {state.usedMb !== null && `, занято ${state.usedMb < 1 ? 'меньше 1' : state.usedMb.toFixed(1)} МБ`}
+          </span>
+        </span>
+        <Icon name="chevron" size={16} class="chev" />
+      </summary>
+      <div class="storage-body small">
+        <p>
+          Защита от автоочистки:{' '}
+          {state.persisted === null ? 'неизвестно' : state.persisted ? 'включена системой' : 'система не подтвердила'}
+        </p>
+        <p>Открыто как: {standalone ? 'приложение с экрана «Домой»' : 'страница в браузере — вноси записи через иконку на экране «Домой»'}</p>
+        <p class="muted">Даже при включённой защите храни копию в «Файлах».</p>
+      </div>
+    </details>
   );
 }

@@ -1,3 +1,4 @@
+import { Icon } from '../components/Icon';
 import { useState } from 'preact/hooks';
 import type { Scale5, Settings, Theme } from '../models/types';
 import { getDb, isDemo, setDemoFlag } from '../db/schema';
@@ -75,8 +76,8 @@ export function SettingsScreen({ onBack, onOpenBackup }: { onBack: () => void; o
   return (
     <div class="screen">
       <header class="screen-head row center">
-        <button type="button" class="icon-btn" onClick={onBack} aria-label="Назад">
-          ‹
+        <button type="button" class="icon-btn round" onClick={onBack} aria-label="Назад">
+          <Icon name="back" size={20} />
         </button>
         <h1>Настройки</h1>
       </header>

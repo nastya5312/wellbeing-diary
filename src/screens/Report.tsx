@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { JSX } from 'preact';
+import { Icon } from '../components/Icon';
 import { getDb } from '../db/schema';
 import { getSettings } from '../db/repo';
 import { buildReport, type ReportData } from '../lib/report';
@@ -62,8 +63,8 @@ export function Report({ today, onBack }: { today: string; onBack: () => void })
   return (
     <div class="screen">
       <header class="screen-head row center no-print">
-        <button type="button" class="icon-btn" onClick={onBack} aria-label="Назад">
-          ‹
+        <button type="button" class="icon-btn round" onClick={onBack} aria-label="Назад">
+          <Icon name="back" size={20} />
         </button>
         <h1>Отчёт для врача</h1>
       </header>

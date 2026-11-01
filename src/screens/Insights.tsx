@@ -3,6 +3,7 @@ import { getDb } from '../db/schema';
 import { getSettings, updateSettings } from '../db/repo';
 import { loadTimeline, runAnalysis, type UiResult } from '../analysis/run';
 import { RepeatsCard } from '../components/RepeatsCard';
+import { Icon, IconBadge } from '../components/Icon';
 import type { Correlation, Signal } from '../analysis/analyze';
 import {
   CATEGORY_LABEL, DISCLAIMER, confoundTexts, correlationDetails, correlationTitle, rrText, signalDetails, signalTitle,
@@ -59,9 +60,16 @@ export function Insights({ onOpenReport }: { onOpenReport?: () => void }) {
       </header>
       <p class="disclaimer">{DISCLAIMER}</p>
       {onOpenReport && (
-        <button type="button" class="btn btn-block" onClick={onOpenReport}>
-          Отчёт для врача (A4)
-        </button>
+        <div class="group">
+          <button type="button" class="row-btn" onClick={onOpenReport}>
+            <IconBadge name="report" tone="report" size={34} />
+            <span class="row-main">
+              <span class="row-title">Отчёт для врача (A4)</span>
+              <span class="row-sub">Сводка и совпадения на одном листе, PDF</span>
+            </span>
+            <Icon name="chevron" size={16} class="chev" />
+          </button>
+        </div>
       )}
 
       {!result && busy && <p class="muted">Считаю…</p>}

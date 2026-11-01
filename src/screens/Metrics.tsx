@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import type { Measurement, Metric } from '../models/types';
+import { Icon } from '../components/Icon';
 import { getDb } from '../db/schema';
 import {
   addMeasurement, addMetric, deleteMeasurement, deleteMetric, listMeasurements, listMetrics, parseNumberRu,
@@ -46,8 +47,8 @@ export function Metrics({ onBack }: { onBack: () => void }) {
   return (
     <div class="screen">
       <header class="screen-head row center">
-        <button type="button" class="icon-btn" onClick={onBack} aria-label="Назад">
-          ‹
+        <button type="button" class="icon-btn round" onClick={onBack} aria-label="Назад">
+          <Icon name="back" size={20} />
         </button>
         <h1>Анализы и показатели</h1>
       </header>
@@ -164,8 +165,8 @@ function MetricDetail({ metric, onBack }: { metric: Metric; onBack: () => void }
   return (
     <div class="screen">
       <header class="screen-head row center">
-        <button type="button" class="icon-btn" onClick={onBack} aria-label="Назад">
-          ‹
+        <button type="button" class="icon-btn round" onClick={onBack} aria-label="Назад">
+          <Icon name="back" size={20} />
         </button>
         <h1 class="grow">{metric.name}</h1>
         <button type="button" class="btn btn-small" onClick={() => setEditingMetric(true)}>

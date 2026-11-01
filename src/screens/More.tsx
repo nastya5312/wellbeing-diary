@@ -8,6 +8,7 @@ import { enterDemo } from '../lib/demo';
 import { safe } from '../lib/notify';
 import type { Settings } from '../models/types';
 import { StorageStatus } from '../components/StorageStatus';
+import { Icon, IconBadge } from '../components/Icon';
 import { APP_NAME, APP_VERSION } from '../lib/appInfo';
 
 export type MorePage = 'menu' | 'catalog' | 'backup' | 'metrics' | 'report' | 'settings';
@@ -24,52 +25,55 @@ export function More({ page, setPage, today, settings }: { page: MorePage; setPa
     void safe(() => enterDemo(today, settings.dayStartsAt));
   };
 
+  const Row = ({ page: to, icon, tone, title, sub }: { page: MorePage; icon: string; tone: string; title: string; sub: string }) => (
+    <button type="button" class="row-btn" onClick={() => setPage(to)}>
+      <IconBadge name={icon} tone={tone} size={34} />
+      <span class="row-main">
+        <span class="row-title">{title}</span>
+        <span class="row-sub">{sub}</span>
+      </span>
+      <Icon name="chevron" size={16} class="chev" />
+    </button>
+  );
+
   return (
     <div class="screen">
       <header class="screen-head">
         <h1>Ещё</h1>
       </header>
-      <ul class="list">
-        <li>
-          <button type="button" class="list-btn" onClick={() => setPage('backup')}>
-            <span>Резервная копия</span>
-            <span class="muted small">сохранить в «Файлы» / восстановить / таблицы CSV</span>
-          </button>
-        </li>
-        <li>
-          <button type="button" class="list-btn" onClick={() => setPage('report')}>
-            <span>Отчёт для врача</span>
-            <span class="muted small">сводка на один лист A4, печать или PDF</span>
-          </button>
-        </li>
-        <li>
-          <button type="button" class="list-btn" onClick={() => setPage('metrics')}>
-            <span>Анализы и показатели</span>
-            <span class="muted small">результаты анализов, вес, давление — с графиком</span>
-          </button>
-        </li>
-        <li>
-          <button type="button" class="list-btn" onClick={() => setPage('catalog')}>
-            <span>Справочник</span>
-            <span class="muted small">добавить и изменить позиции, курсы приёма, вставить список</span>
-          </button>
-        </li>
-        <li>
-          <button type="button" class="list-btn" onClick={() => setPage('settings')}>
-            <span>Настройки</span>
-            <span class="muted small">тема, граница дня, анализ, обновление, удаление данных</span>
-          </button>
-        </li>
-      </ul>
+
+      <h2 class="group-title">Мои данные</h2>
+      <div class="group">
+        <Row page="report" icon="report" tone="report" title="Отчёт для врача" sub="Сводка на один лист A4, PDF" />
+        <Row page="metrics" icon="metric" tone="metric" title="Анализы и показатели" sub="Результаты анализов, вес — с графиком" />
+        <Row page="backup" icon="backup" tone="backup" title="Резервная копия" sub="Сохранить в «Файлы», восстановить, таблицы" />
+      </div>
+
+      <h2 class="group-title">Настройка</h2>
+      <div class="group">
+        <Row page="catalog" icon="catalog" tone="catalog" title="Справочник" sub="Лекарства, еда, симптомы, курсы приёма" />
+        <Row page="settings" icon="settings" tone="settings" title="Настройки" sub="Тема, граница дня, анализ, удаление" />
+      </div>
+
       <StorageStatus />
+
       {!isDemo() && (
-        <button type="button" class="btn btn-block" onClick={startDemo}>
-          Посмотреть демо с вымышленными данными
-        </button>
+        <div class="group">
+          <button type="button" class="row-btn" onClick={startDemo}>
+            <IconBadge name="sparkle" tone="mood" size={34} />
+            <span class="row-main">
+              <span class="row-title">Посмотреть демо</span>
+              <span class="row-sub">Как выглядит анализ на вымышленных данных</span>
+            </span>
+            <Icon name="chevron" size={16} class="chev" />
+          </button>
+        </div>
       )}
-      <p class="muted small">Все записи хранятся только на этом телефоне и никуда не отправляются.</p>
-      <p class="muted small">
-        {APP_NAME} · версия {APP_VERSION}
+
+      <p class="muted small" style={{ textAlign: 'center', margin: '4px 0 0' }}>
+        Записи хранятся только на этом телефоне и никуда не отправляются.
+        <br />
+        {APP_NAME}, версия {APP_VERSION}
       </p>
     </div>
   );

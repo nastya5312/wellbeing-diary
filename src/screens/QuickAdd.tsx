@@ -7,7 +7,8 @@ import { Scale } from '../components/Scale';
 import { ItemForm, type ItemDraft } from '../components/ItemForm';
 import { useLive } from '../lib/useLive';
 import { safe, notify } from '../lib/notify';
-import { INTENSITY_LABELS, KIND_ICON, KIND_LABEL } from '../lib/labels';
+import { INTENSITY_LABELS, KIND_LABEL } from '../lib/labels';
+import { IconBadge } from '../components/Icon';
 import { diaryDate, localTime, tsFromDiaryDate } from '../lib/dates';
 import { matchesSearch } from '../lib/similar';
 
@@ -113,9 +114,7 @@ export function QuickAdd({ settings, date, kind: initialKind, edit, onClose }: P
         <div class="tiles">
           {ADD_KINDS.map((k) => (
             <button type="button" key={k} class="tile" onClick={() => (setKind(k), setStep('item'))}>
-              <span class="tile-icon" aria-hidden="true">
-                {KIND_ICON[k]}
-              </span>
+              <IconBadge name={k} tone={k} size={44} />
               <span>{KIND_LABEL[k]}</span>
             </button>
           ))}
@@ -127,66 +126,82 @@ export function QuickAdd({ settings, date, kind: initialKind, edit, onClose }: P
   if (!kind) return null;
 
   // ---------- Шаг 2: выбор позиции ----------
+  // Сверху поиск; без поиска — быстрый выбор (недавние и избранные, без повторов) и полный список по алфавиту.
   if (step === 'item') {
     const all = items ?? [];
-    const favorites = all.filter((it) => it.favorite);
+    const q = query.trim();
+    const quick: Item[] = [];
+    for (const it of [...(recent ?? []), ...all.filter((x) => x.favorite)]) {
+      if (!quick.some((x) => x.id === it.id) && quick.length < 8) quick.push(it);
+    }
     const found = all
       .filter((it) => matchesSearch(it.name, query))
-      .sort((a, b) => b.useCount - a.useCount || a.name.localeCompare(b.name, 'ru'));
+      .sort((a, b) => (q ? b.useCount - a.useCount : 0) || a.name.localeCompare(b.name, 'ru'));
+    const exact = all.some((it) => it.name.trim().toLowerCase() === q.toLowerCase());
+    const create = () => {
+      setDraft({ name: q, tags: [], favorite: false });
+      setStep('create');
+    };
     return (
       <Sheet title={KIND_LABEL[kind]} onClose={onClose} onBack={initialKind ? undefined : () => setStep('kind')}>
-        {favorites.length > 0 && !query && (
-          <section class="pick-group">
-            <h3>Избранное</h3>
-            <div class="chips">
-              {favorites.map((it) => (
-                <button type="button" key={it.id} class="chip chip-big" onClick={() => pickItem(it)}>
-                  ★ {it.name}
+        <div class="form" style={{ gap: '14px' }}>
+          <label class="field">
+            <span class="visually-hidden">Поиск</span>
+            <input type="search" placeholder={`Найти или создать: ${KIND_LABEL[kind].toLowerCase()}`} value={query} onInput={(e) => setQuery(e.currentTarget.value)} />
+          </label>
+
+          {!q && quick.length > 0 && (
+            <section>
+              <h3>Быстрый выбор</h3>
+              <div class="chips">
+                {quick.map((it) => (
+                  <button type="button" key={it.id} class="chip chip-big" onClick={() => pickItem(it)}>
+                    {it.name}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section>
+            {!q && all.length > 0 && <h3>Все ({all.length})</h3>}
+            <div class="group">
+              {q && !exact && (
+                <button type="button" class="row-btn" onClick={create}>
+                  <IconBadge name="plus" tone="accent" size={30} />
+                  <span class="row-main">
+                    <span class="row-title" style={{ color: 'var(--accent)' }}>Создать «{q}»</span>
+                  </span>
+                </button>
+              )}
+              {found.map((it) => (
+                <button type="button" key={it.id} class="row-btn" onClick={() => pickItem(it)}>
+                  <IconBadge name={kind} tone={kind} size={30} />
+                  <span class="row-main">
+                    <span class="row-title">{it.name}</span>
+                    {it.tags.length > 0 && <span class="row-sub">{it.tags.join(', ')}</span>}
+                  </span>
+                  {it.favorite && (
+                    <span class="muted small" aria-label="в чек-листе">
+                      ★
+                    </span>
+                  )}
                 </button>
               ))}
-            </div>
-          </section>
-        )}
-        {(recent ?? []).length > 0 && !query && (
-          <section class="pick-group">
-            <h3>Недавнее</h3>
-            <div class="chips">
-              {recent!.map((it) => (
-                <button type="button" key={it.id} class="chip chip-big" onClick={() => pickItem(it)}>
-                  {it.name}
+              {!q && (
+                <button type="button" class="row-btn" onClick={create}>
+                  <IconBadge name="plus" tone="accent" size={30} />
+                  <span class="row-main">
+                    <span class="row-title" style={{ color: 'var(--accent)' }}>Создать новое</span>
+                  </span>
                 </button>
-              ))}
+              )}
             </div>
+            {items && q && found.length === 0 && exact === false && (
+              <p class="muted small" style={{ margin: '8px 4px 0' }}>Такого пока нет — можно создать.</p>
+            )}
           </section>
-        )}
-        <label class="field">
-          <span class="visually-hidden">Поиск</span>
-          <input type="search" placeholder="Поиск" value={query} onInput={(e) => setQuery(e.currentTarget.value)} />
-        </label>
-        <ul class="list">
-          {found.map((it) => (
-            <li key={it.id}>
-              <button type="button" class="list-btn" onClick={() => pickItem(it)}>
-                <span>
-                  {it.favorite && '★ '}
-                  {it.name}
-                </span>
-                {it.tags.length > 0 && <span class="muted small">{it.tags.join(', ')}</span>}
-              </button>
-            </li>
-          ))}
-          {items && found.length === 0 && <li class="muted empty">Ничего не найдено</li>}
-        </ul>
-        <button
-          type="button"
-          class="btn btn-block"
-          onClick={() => {
-            setDraft({ name: query.trim(), tags: [], favorite: false });
-            setStep('create');
-          }}
-        >
-          + Создать новое{query.trim() ? ` «${query.trim()}»` : ''}
-        </button>
+        </div>
       </Sheet>
     );
   }

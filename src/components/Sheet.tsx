@@ -1,5 +1,6 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect } from 'preact/hooks';
+import { Icon } from './Icon';
 
 type Props = {
   title: string;
@@ -26,15 +27,15 @@ export function Sheet({ title, onClose, onBack, children, footer }: Props) {
       <div class="sheet" role="dialog" aria-modal="true" aria-label={title}>
         <div class="sheet-head">
           {onBack ? (
-            <button type="button" class="icon-btn" onClick={onBack} aria-label="Назад">
-              ‹
+            <button type="button" class="icon-btn round" onClick={onBack} aria-label="Назад">
+              <Icon name="back" size={20} />
             </button>
           ) : (
             <span class="icon-btn-placeholder" />
           )}
           <h2>{title}</h2>
-          <button type="button" class="icon-btn" onClick={onClose} aria-label="Закрыть">
-            ✕
+          <button type="button" class="icon-btn round" onClick={onClose} aria-label="Закрыть">
+            <Icon name="close" size={18} />
           </button>
         </div>
         <div class="sheet-body">{children}</div>

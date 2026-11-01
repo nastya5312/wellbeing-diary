@@ -7,6 +7,7 @@ import { Trends } from './Trends';
 import { useLive } from '../lib/useLive';
 import { dayCategories, monthGrid } from '../lib/trends';
 import { formatDateLong } from '../lib/dates';
+import { Icon } from '../components/Icon';
 
 const MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
@@ -63,16 +64,17 @@ function Month({ today, ym, setYm, onPick }: {
   const completedCount = data ? flat.filter((d) => data.days.get(d)?.completed).length : 0;
 
   return (
-    <section>
+    <section class="stack" style={{ marginTop: 0 }}>
+      <div class="month-card">
       <div class="month-nav">
         <button type="button" class="icon-btn" aria-label="Предыдущий месяц" onClick={() => shift(-1)}>
-          ‹
+          <Icon name="back" size={22} />
         </button>
         <h2>
           {MONTHS[ym.m - 1]} {ym.y}
         </h2>
         <button type="button" class="icon-btn" aria-label="Следующий месяц" disabled={isFutureMonth} onClick={() => shift(1)}>
-          ›
+          <Icon name="chevron" size={22} />
         </button>
       </div>
       <div class="cal-grid" role="grid" aria-label={`${MONTHS[ym.m - 1]} ${ym.y}`}>
@@ -107,11 +109,6 @@ function Month({ today, ym, setYm, onPick }: {
               onClick={() => onPick(d)}
             >
               <span class="cal-num">{Number(d.slice(8))}</span>
-              {day?.completed && (
-                <span class="cal-check" aria-hidden="true">
-                  ✓
-                </span>
-              )}
               <span class="cal-dots" aria-hidden="true">
                 {cat.symptom && <i class="dot d-symptom" />}
                 {cat.med && <i class="dot d-med" />}
@@ -121,14 +118,15 @@ function Month({ today, ym, setYm, onPick }: {
           );
         })}
       </div>
+      </div>
       <div class="legend small cal-legend">
         <span class="legend-item"><i class="dot d-symptom" /> симптомы</span>
         <span class="legend-item"><i class="dot d-med" /> лекарства, добавки</span>
         <span class="legend-item"><i class="dot d-food" /> еда, напитки</span>
         <span class="legend-item"><span class="legend-flow" /> месячные</span>
-        <span class="legend-item">✓ день заполнен</span>
+        <span class="legend-item"><span class="legend-done" /> день заполнен</span>
       </div>
-      <p class="muted small">
+      <p class="muted small" style={{ margin: '0 4px' }}>
         Заполнено дней в этом месяце: {completedCount}. Нажми на день, чтобы посмотреть или дописать его.
       </p>
     </section>

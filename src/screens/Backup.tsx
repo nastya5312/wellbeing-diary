@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks';
+import { Icon } from '../components/Icon';
 import { getDb } from '../db/schema';
 import { getSettings, updateSettings } from '../db/repo';
 import { createBackup, importBackup, readBackupFile, shareBackup, type BackupFile, type ImportMode } from '../lib/backup';
@@ -78,8 +79,8 @@ export function Backup({ onBack }: { onBack: () => void }) {
   return (
     <div class="screen">
       <header class="screen-head row center">
-        <button type="button" class="icon-btn" onClick={onBack} aria-label="Назад">
-          ‹
+        <button type="button" class="icon-btn round" onClick={onBack} aria-label="Назад">
+          <Icon name="back" size={20} />
         </button>
         <h1>Резервная копия</h1>
       </header>

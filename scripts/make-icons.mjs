@@ -24,7 +24,7 @@ for (const t of targets) {
   await page.setViewportSize({ width: t.size, height: t.size });
   const inner = t.size * t.scale;
   const off = (t.size - inner) / 2;
-  await page.setContent(`<html><body style="margin:0;background:#2f6f62">
+  await page.setContent(`<html><body style="margin:0;background:#4a3fc8">
     <div style="position:absolute;left:${off}px;top:${off}px;width:${inner}px;height:${inner}px">${svg.replace('<svg ', '<svg width="100%" height="100%" ')}</div>
   </body></html>`);
   writeFileSync(out(t.name), await page.screenshot({ type: 'png' }));

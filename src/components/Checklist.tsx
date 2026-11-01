@@ -7,6 +7,7 @@ import { safe, notify } from '../lib/notify';
 import { localTime, tsFromDiaryDate } from '../lib/dates';
 import { INTENSITY_LABELS, KIND_PLURAL } from '../lib/labels';
 import { Sheet } from './Sheet';
+import { Icon, IconBadge } from './Icon';
 import { ItemCreator } from '../screens/Catalog';
 
 const ORDER: ItemKind[] = ['med', 'supplement', 'symptom', 'food', 'drink', 'activity', 'other'];
@@ -115,8 +116,11 @@ export function Checklist({ date, tsFor, items, events, courses, onEmptyHint, da
   if (favorites.length === 0) {
     return (
       <button type="button" class="banner banner-info" onClick={onEmptyHint}>
-        Здесь будет чек-лист для отметок одним касанием. Отметь позиции звёздочкой ★ или{' '}
-        <u>вставь свой список в справочник</u>.
+        <IconBadge name="catalog" tone="accent" size={32} />
+        <span class="grow">
+          Здесь будет чек-лист: лекарства, добавки, еда — отметка одним касанием. <u>Добавить свой список</u>
+        </span>
+        <Icon name="chevron" size={18} class="chev" />
       </button>
     );
   }
@@ -134,22 +138,17 @@ export function Checklist({ date, tsFor, items, events, courses, onEmptyHint, da
             <div class="group-head">
               <h3>
                 <button type="button" class="group-toggle" aria-expanded={isOpen} onClick={() => toggleGroup(kind)}>
-                  <span aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
+                  <IconBadge name={kind} tone={kind} size={30} />
                   {KIND_PLURAL[kind]}
-                  <span class="muted">
-                    {' '}
-                    · {marked} из {group.length}
+                  <span class="group-count">
+                    {marked}/{group.length}
                   </span>
+                  <Icon name="chevron" size={16} class={`group-caret${isOpen ? '' : ' closed'}`} />
                 </button>
               </h3>
-              {isOpen && ROUTINE.includes(kind) && active.length > 1 && (
-                <button type="button" class="btn btn-small" onClick={() => void markRoutine(group)}>
-                  Всё как обычно
-                </button>
-              )}
               {isOpen && (
-                <button type="button" class="icon-btn icon-small" aria-label={`Добавить: ${KIND_PLURAL[kind]}`} onClick={() => setCreating(kind)}>
-                  +
+                <button type="button" class="icon-btn icon-small" aria-label={`Добавить новое: ${KIND_PLURAL[kind]}`} onClick={() => setCreating(kind)}>
+                  <Icon name="plus" size={20} />
                 </button>
               )}
             </div>
@@ -170,7 +169,7 @@ export function Checklist({ date, tsFor, items, events, courses, onEmptyHint, da
                         onClick={() => void (n ? unmark(it) : add(it))}
                       >
                         <span class="chip-mark" aria-hidden="true">
-                          {n ? '✓' : ''}
+                          <Icon name="check" size={15} />
                         </span>
                         <span>
                           {it.name}
@@ -202,10 +201,15 @@ export function Checklist({ date, tsFor, items, events, courses, onEmptyHint, da
                 })}
               </div>
             )}
+            {isOpen && ROUTINE.includes(kind) && active.length > 1 && marked < active.length && (
+              <button type="button" class="btn btn-link routine-btn" onClick={() => void markRoutine(group)}>
+                <Icon name="check" size={18} /> Отметить всё как обычно
+              </button>
+            )}
           </div>
         );
       })}
-      <p class="muted small">Касание — отметить, ещё касание — снять. «+1» — ещё раз за день (вторая чашка, повтор симптома).</p>
+      <p class="muted small checklist-hint">Касание — отметить, ещё касание — снять. «+1» — ещё раз за день.</p>
 
       {askIntensity && (
         <Sheet title={askIntensity.name} onClose={() => setAskIntensity(null)}>
