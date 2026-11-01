@@ -1,0 +1,65 @@
+// Модель данных дневника (ТЗ, раздел 5).
+// Даты — локальная дата устройства 'YYYY-MM-DD' с учётом границы дня, время — 'HH:MM'.
+
+export type Scale5 = 1 | 2 | 3 | 4 | 5;
+export type Flow = 0 | 1 | 2 | 3; // месячные: 0 нет, 1–3 интенсивность
+
+export type Sleep = {
+  bedtime?: string; // 'HH:MM'
+  wake?: string; // 'HH:MM'
+  durationMin?: number; // считается автоматически, можно поправить
+  quality?: Scale5;
+  awakenings?: number;
+  note?: string;
+};
+
+export type Wellbeing = { mood?: Scale5; energy?: Scale5; stress?: Scale5 };
+
+export type Day = {
+  date: string; // 'YYYY-MM-DD', ключ
+  completed: boolean; // нажата кнопка «День заполнен»
+  sleep?: Sleep; // сон относится к дате пробуждения
+  wellbeing?: Wellbeing;
+  flow?: Flow;
+  note?: string;
+  updatedAt: number;
+};
+
+export const ITEM_KINDS = ['food', 'drink', 'med', 'supplement', 'symptom', 'activity', 'other'] as const;
+export type ItemKind = (typeof ITEM_KINDS)[number];
+
+export type Item = {
+  id: string;
+  kind: ItemKind;
+  name: string;
+  tags: string[];
+  favorite: boolean;
+  archived: boolean;
+  useCount: number;
+  createdAt: number;
+};
+
+// В ТЗ тип называется Event; здесь DiaryEvent, чтобы не путать со встроенным DOM-типом Event.
+export type DiaryEvent = {
+  id: string;
+  date: string; // с учётом границы дня
+  ts: number;
+  itemId: string;
+  kind: ItemKind;
+  intensity?: Scale5; // для симптомов
+  amountText?: string; // свободный текст, приложение его не разбирает и не оценивает
+  note?: string;
+};
+
+export type Theme = 'auto' | 'light' | 'dark';
+
+export type Settings = {
+  dayStartsAt: string; // 'HH:MM', по умолчанию '04:00'
+  symptomMinIntensity: Scale5;
+  shortSleepMin: number;
+  longSleepMin: number;
+  lagDays: number[];
+  theme: Theme;
+  lastExportAt?: number;
+  version: number; // версия схемы данных
+};
