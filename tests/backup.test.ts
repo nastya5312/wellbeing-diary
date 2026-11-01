@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { DiaryDB } from '../src/db/schema';
 import { addEvent, addItem, saveDay, updateSettings, listItems } from '../src/db/repo';
+import { addMeasurement, addMetric, startCourse, endCourse } from '../src/db/courses';
 import { backupOverdue, createBackup, importBackup, validateBackup, type BackupFile } from '../src/lib/backup';
 
 // Только вымышленные данные
@@ -30,6 +31,10 @@ async function fill() {
     sleep: { bedtime: '23:30', wake: '07:15', durationMin: 465, quality: 4, awakenings: 1 },
     wellbeing: { mood: 3, energy: 2, stress: 4 },
   });
+  const c = await startCourse(db, med.id, '2026-09-01');
+  await endCourse(db, c.id, '2026-10-20');
+  const m = await addMetric(db, { name: 'Показатель-Т', unit: 'ед', refLow: 0.4, refHigh: 4 });
+  await addMeasurement(db, { metricId: m.id, date: '2026-10-01', value: 2.5, note: 'вымысел' });
 }
 
 // Сравнение без учёта порядка строк и времени экспорта
@@ -38,6 +43,9 @@ const norm = (b: BackupFile) => ({
   items: [...b.items].sort((x, y) => x.id.localeCompare(y.id)),
   days: [...b.days].sort((x, y) => x.date.localeCompare(y.date)),
   events: [...b.events].sort((x, y) => x.id.localeCompare(y.id)),
+  courses: b.courses,
+  metrics: b.metrics,
+  measurements: b.measurements,
 });
 
 describe('резервная копия', () => {
@@ -64,7 +72,7 @@ describe('резервная копия', () => {
     await fill();
     const backup = await createBackup(db);
     const stats1 = await importBackup(db, backup, 'merge');
-    expect(stats1).toEqual({ items: 0, days: 0, events: 0 });
+    expect(stats1).toEqual({ items: 0, days: 0, events: 0, courses: 0, measurements: 0 });
 
     // Удалим одну запись и один день — импорт вернёт только их
     const ev = backup.events[0]!;
@@ -72,7 +80,7 @@ describe('резервная копия', () => {
     await db.days.delete('2026-11-01');
     await saveDay(db, '2026-11-05', { completed: true });
     const stats2 = await importBackup(db, backup, 'merge');
-    expect(stats2).toEqual({ items: 0, days: 1, events: 1 });
+    expect(stats2).toEqual({ items: 0, days: 1, events: 1, courses: 0, measurements: 0 });
     expect(await db.days.get('2026-11-05')).toBeDefined();
     expect(await db.events.count()).toBe(backup.events.length);
   });
@@ -91,6 +99,17 @@ describe('резервная копия', () => {
     expect(bad({ items: [{ ...ok.items[0], kind: 'pizza' }] }).ok).toBe(false);
     expect(bad({ items: [...ok.items, ok.items[0]] }).ok).toBe(false);
     expect(bad({ days: [{ ...ok.days[0], wellbeing: { mood: 9 } }] }).ok).toBe(false);
+    expect(bad({ courses: [{ ...ok.courses[0], itemId: 'нет' }] }).ok).toBe(false);
+    expect(bad({ measurements: [{ ...ok.measurements[0], value: 'много' }] }).ok).toBe(false);
+  });
+
+  it('файл старого формата 1 (без курсов и показателей) принимается', async () => {
+    await fill();
+    const b = await createBackup(db);
+    const { courses: _c, metrics: _m, measurements: _x, ...v1 } = { ...b, format: 1, dataVersion: 1 };
+    const res = validateBackup(JSON.parse(JSON.stringify(v1)));
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.data.courses).toEqual([]);
   });
 
   it('при ошибке импорта база не меняется', async () => {

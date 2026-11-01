@@ -45,6 +45,7 @@ export function Today({ today, settings, onOpenBackup, onOpenCatalog }: {
   const cycle = useLive(async () => cycleDay(await listFlowDates(db, addDays(today, -90), today), today), [today]);
   const yesterday = useLive(() => unfinishedYesterday(db, today), [today]);
   const hasData = useLive(() => hasAnyData(db), []);
+  const courses = useLive(() => db.courses.toArray(), []);
   const needBackup = hasData !== undefined && backupOverdue(settings.lastExportAt, hasData, BACKUP_REMIND_DAYS);
 
   const close = () => setOpen(null);
@@ -82,8 +83,8 @@ export function Today({ today, settings, onOpenBackup, onOpenCatalog }: {
         </button>
       )}
 
-      {items && events && (
-        <Checklist today={today} items={[...items.values()]} events={events} onEmptyHint={onOpenCatalog} />
+      {items && events && courses && (
+        <Checklist today={today} items={[...items.values()]} events={events} courses={courses} onEmptyHint={onOpenCatalog} />
       )}
 
       <h2 class="section-title">Добавить</h2>

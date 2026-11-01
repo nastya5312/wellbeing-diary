@@ -1,6 +1,6 @@
 // Резервная копия: экспорт всех данных в JSON и восстановление из файла.
 import type { DiaryDB } from '../db/schema';
-import type { Day, DiaryEvent, Item, Settings } from '../models/types';
+import type { Course, Day, DiaryEvent, Item, Measurement, Metric, Settings } from '../models/types';
 import { ITEM_KINDS } from '../models/types';
 import { DATA_VERSION, DEFAULT_SETTINGS } from '../db/defaults';
 import { getSettings } from '../db/repo';
@@ -8,7 +8,7 @@ import { isDateString, isTimeString, localDate } from './dates';
 import { APP_VERSION } from './appInfo';
 
 export const BACKUP_APP_ID = 'wellbeing-diary';
-export const BACKUP_FORMAT = 1;
+export const BACKUP_FORMAT = 2; // 2: добавлены курсы, показатели и значения
 
 export type BackupFile = {
   app: typeof BACKUP_APP_ID;
@@ -20,10 +20,15 @@ export type BackupFile = {
   items: Item[];
   days: Day[];
   events: DiaryEvent[];
+  courses: Course[];
+  metrics: Metric[];
+  measurements: Measurement[];
 };
 
+const ALL_TABLES = (db: DiaryDB) => [db.settings, db.items, db.days, db.events, db.courses, db.metrics, db.measurements];
+
 export async function createBackup(db: DiaryDB): Promise<BackupFile> {
-  return db.transaction('r', [db.settings, db.items, db.days, db.events], async () => ({
+  return db.transaction('r', ALL_TABLES(db), async () => ({
     app: BACKUP_APP_ID,
     format: BACKUP_FORMAT,
     dataVersion: DATA_VERSION,
@@ -33,6 +38,9 @@ export async function createBackup(db: DiaryDB): Promise<BackupFile> {
     items: await db.items.toArray(),
     days: await db.days.toArray(),
     events: await db.events.toArray(),
+    courses: await db.courses.toArray(),
+    metrics: await db.metrics.toArray(),
+    measurements: await db.measurements.toArray(),
   }));
 }
 
@@ -93,6 +101,33 @@ function checkEvent(x: unknown, itemIds: Set<string>): string | null {
   return null;
 }
 
+function checkCourse(x: unknown, itemIds: Set<string>): string | null {
+  if (!isObj(x) || !isStr(x.id) || !x.id) return 'курс без id';
+  if (!isStr(x.itemId) || !itemIds.has(x.itemId)) return 'курс ссылается на несуществующую позицию';
+  if (!isStr(x.start) || !isDateString(x.start)) return 'неверная дата начала курса';
+  if (x.end !== undefined && !(isStr(x.end) && isDateString(x.end) && x.end >= x.start)) return 'неверная дата конца курса';
+  if (!optStr(x.note)) return 'неверная заметка курса';
+  return null;
+}
+
+function checkMetric(x: unknown): string | null {
+  if (!isObj(x) || !isStr(x.id) || !x.id) return 'показатель без id';
+  if (!isStr(x.name) || !x.name.trim() || !isStr(x.unit)) return 'показатель без названия';
+  if ((x.refLow !== undefined && !isNum(x.refLow)) || (x.refHigh !== undefined && !isNum(x.refHigh))) return `неверная норма у «${x.name}»`;
+  if (typeof x.archived !== 'boolean' || !isNum(x.createdAt)) return `неверные поля у «${x.name}»`;
+  return null;
+}
+
+function checkMeasurement(x: unknown, metricIds: Set<string>): string | null {
+  if (!isObj(x) || !isStr(x.id) || !x.id) return 'значение без id';
+  if (!isStr(x.metricId) || !metricIds.has(x.metricId)) return 'значение ссылается на несуществующий показатель';
+  if (!isStr(x.date) || !isDateString(x.date) || !isNum(x.ts) || !isNum(x.value)) return 'неверное значение показателя';
+  if (!optStr(x.note)) return 'неверная заметка значения';
+  return null;
+}
+
+const uniqueIds = (rows: unknown[]) => new Set(rows.map((r) => (r as { id: string }).id)).size === rows.length;
+
 /** Проверка структуры и версии. Ничего не записывает. */
 export function validateBackup(raw: unknown): Result {
   if (!isObj(raw) || raw.app !== BACKUP_APP_ID) return { ok: false, error: 'Это не файл резервной копии дневника.' };
@@ -119,16 +154,44 @@ export function validateBackup(raw: unknown): Result {
     const e = checkEvent(ev, seen);
     if (e) return fail(e);
   }
+  // Файлы формата 1 (до курсов и показателей) — пустые разделы
+  const courses = Array.isArray(raw.courses) ? raw.courses : [];
+  const metrics = Array.isArray(raw.metrics) ? raw.metrics : [];
+  const measurements = Array.isArray(raw.measurements) ? raw.measurements : [];
+  if (!uniqueIds(raw.events) || !uniqueIds(courses) || !uniqueIds(metrics) || !uniqueIds(measurements)) {
+    return fail('повторяющиеся записи');
+  }
+  if (new Set(raw.days.map((d) => (d as Day).date)).size !== raw.days.length) return fail('повторяющиеся дни');
+  for (const c of courses) {
+    const e = checkCourse(c, seen);
+    if (e) return fail(e);
+  }
+  const metricIds = new Set<string>();
+  for (const m of metrics) {
+    const e = checkMetric(m);
+    if (e) return fail(e);
+    metricIds.add((m as Metric).id);
+  }
+  for (const m of measurements) {
+    const e = checkMeasurement(m, metricIds);
+    if (e) return fail(e);
+  }
   const s = raw.settings;
   if (s.dayStartsAt !== undefined && !(isStr(s.dayStartsAt) && isTimeString(s.dayStartsAt))) return fail('неверная граница дня');
   return {
     ok: true,
-    data: { ...(raw as unknown as BackupFile), settings: { ...DEFAULT_SETTINGS, ...(s as Partial<Settings>), version: DATA_VERSION } },
+    data: {
+      ...(raw as unknown as BackupFile),
+      courses: courses as Course[],
+      metrics: metrics as Metric[],
+      measurements: measurements as Measurement[],
+      settings: { ...DEFAULT_SETTINGS, ...(s as Partial<Settings>), version: DATA_VERSION },
+    },
   };
 }
 
 export type ImportMode = 'merge' | 'replace';
-export type ImportStats = { items: number; days: number; events: number };
+export type ImportStats = { items: number; days: number; events: number; courses: number; measurements: number };
 
 /**
  * Восстановление.
@@ -137,16 +200,22 @@ export type ImportStats = { items: number; days: number; events: number };
  * Всё в одной транзакции: при ошибке база остаётся как была.
  */
 export async function importBackup(db: DiaryDB, data: BackupFile, mode: ImportMode): Promise<ImportStats> {
-  return db.transaction('rw', [db.settings, db.items, db.days, db.events], async () => {
+  return db.transaction('rw', ALL_TABLES(db), async () => {
     if (mode === 'replace') {
-      await Promise.all([db.items.clear(), db.days.clear(), db.events.clear(), db.settings.clear()]);
+      await Promise.all(ALL_TABLES(db).map((t) => t.clear()));
       // Файл, из которого восстановили, — это существующая копия: её дата считается последней копией
       const lastExportAt = Math.max(data.settings.lastExportAt ?? 0, data.exportedAt);
       await db.settings.put({ key: 'app', ...data.settings, lastExportAt });
       await db.items.bulkAdd(data.items);
       await db.days.bulkAdd(data.days);
       await db.events.bulkAdd(data.events);
-      return { items: data.items.length, days: data.days.length, events: data.events.length };
+      await db.courses.bulkAdd(data.courses);
+      await db.metrics.bulkAdd(data.metrics);
+      await db.measurements.bulkAdd(data.measurements);
+      return {
+        items: data.items.length, days: data.days.length, events: data.events.length,
+        courses: data.courses.length, measurements: data.measurements.length,
+      };
     }
     const missing = async <T, K extends string>(table: { bulkGet(keys: K[]): Promise<(T | undefined)[]> }, rows: T[], key: (r: T) => K) => {
       const existing = await table.bulkGet(rows.map(key));
@@ -155,14 +224,20 @@ export async function importBackup(db: DiaryDB, data: BackupFile, mode: ImportMo
     const items = await missing(db.items, data.items, (r) => r.id);
     const days = await missing(db.days, data.days, (r) => r.date);
     const events = await missing(db.events, data.events, (r) => r.id);
+    const courses = await missing(db.courses, data.courses, (r) => r.id);
+    const metrics = await missing(db.metrics, data.metrics, (r) => r.id);
+    const measurements = await missing(db.measurements, data.measurements, (r) => r.id);
     await db.items.bulkAdd(items);
     await db.days.bulkAdd(days);
     await db.events.bulkAdd(events);
+    await db.courses.bulkAdd(courses);
+    await db.metrics.bulkAdd(metrics);
+    await db.measurements.bulkAdd(measurements);
     const current = await db.settings.get('app');
     if (current && (current.lastExportAt ?? 0) < data.exportedAt) {
       await db.settings.put({ ...current, lastExportAt: data.exportedAt });
     }
-    return { items: items.length, days: days.length, events: events.length };
+    return { items: items.length, days: days.length, events: events.length, courses: courses.length, measurements: measurements.length };
   });
 }
 
@@ -181,11 +256,11 @@ export async function readBackupFile(file: File): Promise<Result> {
  * Отдать файл копии: системное меню «Поделиться» (там «Сохранить в Файлы»),
  * если не поддерживается — обычное скачивание. Возвращает false, если пользовательница отменила.
  */
-export async function shareBackup(data: BackupFile): Promise<boolean> {
+export async function shareBackup(data: BackupFile, how: 'share' | 'download' = 'share'): Promise<boolean> {
   const name = backupFileName(data.exportedAt);
   const json = JSON.stringify(data);
   const file = new File([json], name, { type: 'application/json' });
-  if (navigator.canShare?.({ files: [file] })) {
+  if (how === 'share' && navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title: name });
       return true;

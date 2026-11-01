@@ -365,3 +365,26 @@ textarea { resize: vertical; }
   border: none; background: none; color: var(--muted); font: inherit; font-weight: 600; cursor: pointer;
 }
 .check-group h3 { margin: 0; }
+.group-head { display: flex; align-items: center; gap: 6px; }
+.group-head h3 { flex: 1; min-width: 0; }
+.btn-small { min-height: 36px; padding: 4px 12px; font-size: 0.9rem; border-radius: 999px; }
+.icon-small { width: 40px; height: 40px; font-size: 1.4rem; color: var(--accent); }
+.chip-wrap { display: inline-flex; align-items: stretch; gap: 4px; max-width: 100%; }
+.chip-plus {
+  flex: none; min-width: var(--tap); min-height: var(--tap);
+  border: 1px solid var(--accent); border-radius: 999px;
+  background: var(--surface); color: var(--accent); font-weight: 600; cursor: pointer;
+}
+.chip-check.paused { opacity: 0.6; border-style: dashed; }
+.intensity-list { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
+.intensity-btn { text-align: left; min-height: 52px; display: flex; gap: 12px; align-items: center; }
+.danger-link { color: var(--danger); }
+.course-row { padding: 2px 0 2px 4px; }
+
+/* ---------- Графики ---------- */
+.chart { width: 100%; height: auto; display: block; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.chart-ref { fill: var(--accent-soft); }
+.chart-axis { stroke: var(--border); stroke-width: 1; }
+.chart-line { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.chart-dot { fill: var(--accent); }
+.chart-text { fill: var(--muted); font-size: 11px; }

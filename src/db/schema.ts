@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import type { Day, DiaryEvent, Item, Settings } from '../models/types';
+import type { Course, Day, DiaryEvent, Item, Measurement, Metric, Settings } from '../models/types';
 import { DEFAULT_SETTINGS, STARTER_ITEMS } from './defaults';
 
 export const DB_NAME = 'wellbeing-diary';
@@ -11,6 +11,9 @@ export class DiaryDB extends Dexie {
   items!: Table<Item, string>;
   events!: Table<DiaryEvent, string>;
   settings!: Table<SettingsRow, string>;
+  courses!: Table<Course, string>;
+  metrics!: Table<Metric, string>;
+  measurements!: Table<Measurement, string>;
 
   constructor(name = DB_NAME) {
     super(name);
@@ -27,6 +30,23 @@ export class DiaryDB extends Dexie {
       events: '&id, date, ts, itemId, kind, [date+ts]',
       settings: '&key',
     });
+
+    // Версия 2 (ноябрь 2026): курсы приёма, показатели и их значения. Старые данные не меняются.
+    this.version(2)
+      .stores({
+        days: '&date, completed, updatedAt',
+        items: '&id, kind, name, favorite, archived',
+        events: '&id, date, ts, itemId, kind, [date+ts]',
+        settings: '&key',
+        courses: '&id, itemId, start',
+        metrics: '&id, name',
+        measurements: '&id, metricId, date, [metricId+date]',
+      })
+      .upgrade(async (tx) => {
+        await tx.table('settings').toCollection().modify((s: { version?: number }) => {
+          s.version = 2;
+        });
+      });
 
     // Первое создание базы: настройки по умолчанию и стартовый справочник.
     this.on('populate', (tx) => {

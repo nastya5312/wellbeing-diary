@@ -63,3 +63,32 @@ export type Settings = {
   lastExportAt?: number;
   version: number; // версия схемы данных
 };
+
+// Курс приёма лекарства/добавки: «принимаю с … », «на паузе с … ». Нужен анализу, чтобы сравнивать периоды.
+export type Course = {
+  id: string;
+  itemId: string;
+  start: string; // 'YYYY-MM-DD'
+  end?: string; // 'YYYY-MM-DD', последний день приёма; нет — курс идёт
+  note?: string;
+};
+
+// Показатель (анализ, измерение): ТТГ, ферритин, вес… Норму Настя вводит сама с бланка своей лаборатории.
+export type Metric = {
+  id: string;
+  name: string;
+  unit: string;
+  refLow?: number;
+  refHigh?: number;
+  archived: boolean;
+  createdAt: number;
+};
+
+export type Measurement = {
+  id: string;
+  metricId: string;
+  date: string;
+  ts: number;
+  value: number;
+  note?: string;
+};

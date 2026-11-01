@@ -17,11 +17,11 @@ export function Backup({ onBack }: { onBack: () => void }) {
   const last = settings?.lastExportAt;
   const ago = last !== undefined ? daysBetween(localDate(new Date(last)), localDate(new Date())) : null;
 
-  const save = async () => {
+  const save = async (how: 'share' | 'download') => {
     setBusy(true);
     await safe(async () => {
       const data = await createBackup(db);
-      if (await shareBackup(data)) {
+      if (await shareBackup(data, how)) {
         await updateSettings(db, { lastExportAt: data.exportedAt });
         notify('Копия создана');
       }
@@ -74,17 +74,27 @@ export function Backup({ onBack }: { onBack: () => void }) {
             ? 'Копий ещё не было.'
             : `Последняя копия: ${formatDateRu(localDate(new Date(last)))}${ago ? ` (дней назад: ${ago})` : ' (сегодня)'}.`}
         </p>
-        <button type="button" class="btn btn-primary btn-block" disabled={busy} onClick={save}>
+        <button type="button" class="btn btn-primary btn-block" disabled={busy} onClick={() => save('share')}>
           Сохранить копию
         </button>
         <ol class="steps small">
-          <li>Нажми «Сохранить копию».</li>
-          <li>В открывшемся меню выбери «Сохранить в Файлы».</li>
-          <li>Выбери «iCloud Drive» → удобную папку (например, «Дневник») → «Сохранить».</li>
+          <li>«Сохранить копию» → «Сохранить в Файлы».</li>
+          <li>
+            Если вверху окна написано <strong>iCloud Drive › Загрузки</strong> — сразу жми «Сохранить». Эта папка
+            уже в облаке, никуда переходить не нужно.
+          </li>
+          <li>Если там «На iPhone» — один раз выбери iCloud Drive. Обычно iOS запоминает последнюю папку.</li>
         </ol>
+        <button type="button" class="btn btn-block" disabled={busy} onClick={() => save('download')}>
+          Быстрый вариант: скачать в «Загрузки»
+        </button>
         <p class="muted small">
-          Копия в iCloud Drive переживёт потерю телефона. Делай её раз в неделю — приложение напомнит.
+          Быстрый вариант сохраняет файл сразу, без выбора папки (на iPhone ещё не проверено — если не сработает,
+          пользуйся кнопкой выше). Копия в iCloud Drive переживёт потерю телефона. Раз в неделю приложение напомнит.
         </p>
+        <a class="btn btn-link" href="shareddocuments://">
+          Открыть «Файлы», чтобы проверить копию
+        </a>
       </section>
 
       <section class="panel">

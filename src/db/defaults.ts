@@ -1,7 +1,7 @@
 import type { ItemKind, Settings } from '../models/types';
 
 // Текущая версия схемы данных. Увеличивать вместе с новой версией в schema.ts.
-export const DATA_VERSION = 1;
+export const DATA_VERSION = 2;
 
 export const DEFAULT_SETTINGS: Settings = {
   dayStartsAt: '04:00',
@@ -28,3 +28,18 @@ export const FOOD_TAG_SUGGESTIONS = [
 
 // Через сколько дней без резервной копии показывать напоминание
 export const BACKUP_REMIND_DAYS = 7;
+
+// Подсказки названий показателей (общие, без личных значений). Норму вводит пользовательница.
+export const METRIC_SUGGESTIONS: { name: string; unit: string }[] = [
+  { name: 'ТТГ', unit: 'мМЕ/л' },
+  { name: 'Т4 свободный', unit: 'пмоль/л' },
+  { name: 'Ферритин', unit: 'нг/мл' },
+  { name: 'Гемоглобин', unit: 'г/л' },
+  { name: 'Витамин D (25-OH)', unit: 'нг/мл' },
+  { name: 'Холестерин общий', unit: 'ммоль/л' },
+  { name: 'ЛПНП', unit: 'ммоль/л' },
+  { name: 'Вес', unit: 'кг' },
+  { name: 'Давление верхнее', unit: 'мм рт. ст.' },
+  { name: 'Давление нижнее', unit: 'мм рт. ст.' },
+  { name: 'Температура', unit: '°C' },
+];

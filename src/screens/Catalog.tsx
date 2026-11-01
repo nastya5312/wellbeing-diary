@@ -8,6 +8,7 @@ import { useLive } from '../lib/useLive';
 import { safe, notify } from '../lib/notify';
 import { KIND_PLURAL } from '../lib/labels';
 import { PasteList } from './PasteList';
+import { CoursePanel } from '../components/CoursePanel';
 
 // Справочник: позиции по типам, переименование, теги, избранное, архив, объединение дублей.
 export function Catalog({ onBack }: { onBack: () => void }) {
@@ -109,8 +110,8 @@ function ItemRow({ item, count, onTap }: { item: Item; count?: number; onTap: ()
   );
 }
 
-function ItemCreator({ kind, onClose }: { kind: ItemKind; onClose: () => void }) {
-  const [draft, setDraft] = useState<ItemDraft>({ name: '', tags: [], favorite: false });
+export function ItemCreator({ kind, onClose, defaultFavorite = false }: { kind: ItemKind; onClose: () => void; defaultFavorite?: boolean }) {
+  const [draft, setDraft] = useState<ItemDraft>({ name: '', tags: [], favorite: defaultFavorite });
   const create = async () => {
     const it = await safe(() => addItem(getDb(), { kind, ...draft }));
     if (it) {
@@ -207,6 +208,7 @@ function ItemEditor({ item, onClose }: { item: Item; onClose: () => void }) {
     >
       <ItemForm kind={item.kind} draft={draft} onChange={setDraft} selfId={item.id} />
       <p class="muted small">Записей с этой позицией: {count ?? '…'}</p>
+      {(item.kind === 'med' || item.kind === 'supplement') && <CoursePanel item={item} />}
       <div class="stack">
         <button type="button" class="btn btn-block" onClick={() => setMerging(true)}>
           Объединить с другой (дубль)
