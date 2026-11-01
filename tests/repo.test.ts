@@ -27,7 +27,7 @@ describe('первый запуск', () => {
   });
   it('стартовый справочник: 8 симптомов, 4 напитка, без лекарств', async () => {
     expect((await listItems(db, { kind: 'symptom' })).map((i) => i.name)).toEqual([
-      'прыщи', 'головная боль', 'боль внизу живота', 'тошнота', 'вздутие', 'усталость', 'отёки', 'изжога',
+      'прыщи', 'головная боль', 'боль внизу живота', 'тошнота', 'вздутие живота', 'усталость', 'отёки', 'изжога',
     ]);
     expect(await listItems(db, { kind: 'drink' })).toHaveLength(4);
     expect(await listItems(db, { kind: 'med' })).toHaveLength(0);

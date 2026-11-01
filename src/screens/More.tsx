@@ -2,6 +2,7 @@ import { Catalog } from './Catalog';
 import { Backup } from './Backup';
 import { Metrics } from './Metrics';
 import { Report } from './Report';
+import { SettingsScreen } from './SettingsScreen';
 import { isDemo } from '../db/schema';
 import { enterDemo } from '../lib/demo';
 import { safe } from '../lib/notify';
@@ -9,12 +10,13 @@ import type { Settings } from '../models/types';
 import { StorageStatus } from '../components/StorageStatus';
 import { APP_NAME, APP_VERSION } from '../lib/appInfo';
 
-export type MorePage = 'menu' | 'catalog' | 'backup' | 'metrics' | 'report';
+export type MorePage = 'menu' | 'catalog' | 'backup' | 'metrics' | 'report' | 'settings';
 
 export function More({ page, setPage, today, settings }: { page: MorePage; setPage: (p: MorePage) => void; today: string; settings: Settings }) {
   if (page === 'catalog') return <Catalog onBack={() => setPage('menu')} />;
   if (page === 'backup') return <Backup onBack={() => setPage('menu')} />;
   if (page === 'metrics') return <Metrics onBack={() => setPage('menu')} />;
+  if (page === 'settings') return <SettingsScreen onBack={() => setPage('menu')} onOpenBackup={() => setPage('backup')} />;
   if (page === 'report') return <Report today={today} onBack={() => setPage('menu')} />;
 
   const startDemo = () => {
@@ -31,7 +33,7 @@ export function More({ page, setPage, today, settings }: { page: MorePage; setPa
         <li>
           <button type="button" class="list-btn" onClick={() => setPage('backup')}>
             <span>Резервная копия</span>
-            <span class="muted small">сохранить в «Файлы» / восстановить</span>
+            <span class="muted small">сохранить в «Файлы» / восстановить / таблицы CSV</span>
           </button>
         </li>
         <li>
@@ -52,6 +54,12 @@ export function More({ page, setPage, today, settings }: { page: MorePage; setPa
             <span class="muted small">добавить и изменить позиции, курсы приёма, вставить список</span>
           </button>
         </li>
+        <li>
+          <button type="button" class="list-btn" onClick={() => setPage('settings')}>
+            <span>Настройки</span>
+            <span class="muted small">тема, граница дня, анализ, обновление, удаление данных</span>
+          </button>
+        </li>
       </ul>
       <StorageStatus />
       {!isDemo() && (
@@ -59,7 +67,6 @@ export function More({ page, setPage, today, settings }: { page: MorePage; setPa
           Посмотреть демо с вымышленными данными
         </button>
       )}
-      <p class="muted small">Настройки появятся на следующем этапе.</p>
       <p class="muted small">Все записи хранятся только на этом телефоне и никуда не отправляются.</p>
       <p class="muted small">
         {APP_NAME} · версия {APP_VERSION}

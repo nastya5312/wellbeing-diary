@@ -31,7 +31,8 @@ describe('миграция схемы 1 → 2', () => {
     const db = new DiaryDB('mig-1');
     await db.open();
     expect(db.verno).toBe(DATA_VERSION);
-    expect(await db.items.count()).toBe(1); // стартовый справочник не добавляется к существующей базе
+    // стартовый справочник не добавляется к существующей базе; версия 3 добавляет «вздутие живота» со ★
+    expect((await db.items.toArray()).sort((a, b) => a.createdAt - b.createdAt).map((i) => [i.name, i.favorite])).toEqual([['Добавка-Тест', true], ['вздутие живота', true]]);
     expect(await db.events.toArray()).toEqual([
       { id: 'e1', date: '2026-11-01', ts: 1, itemId: 'i1', kind: 'supplement' },
       { id: 'e2', date: '2026-11-02', ts: 2, itemId: 'i1', kind: 'supplement', amountText: '1 шт.' },
@@ -40,9 +41,30 @@ describe('миграция схемы 1 → 2', () => {
     const s = await getSettings(db);
     expect(s.dayStartsAt).toBe('05:00');
     expect(s.lastExportAt).toBe(123);
-    expect(s.version).toBe(2);
+    expect(s.version).toBe(3);
     expect(await db.courses.count()).toBe(0);
     expect(await db.metrics.count()).toBe(0);
+    await db.delete();
+  });
+});
+
+describe('миграция 2 → 3: вздутие в чек-листе', () => {
+  it('существующий симптом со словом «вздутие» получает ★, новый не создаётся, архивный не трогается', async () => {
+    await createV1('mig-3');
+    const old = new Dexie('mig-3');
+    old.version(1).stores({ items: '&id, kind, name, favorite, archived' });
+    await old.open();
+    await old.table('items').bulkAdd([
+      { id: 'b1', kind: 'symptom', name: 'Вздутие', tags: [], favorite: false, archived: false, useCount: 0, createdAt: 2 },
+      { id: 'b2', kind: 'symptom', name: 'вздутие старое', tags: [], favorite: false, archived: true, useCount: 0, createdAt: 3 },
+    ]);
+    old.close();
+    const db = new DiaryDB('mig-3');
+    await db.open();
+    const items = await db.items.toArray();
+    expect(items.find((i) => i.id === 'b1')!.favorite).toBe(true);
+    expect(items.find((i) => i.id === 'b2')!.favorite).toBe(false);
+    expect(items.filter((i) => /вздути/i.test(i.name))).toHaveLength(2);
     await db.delete();
   });
 });

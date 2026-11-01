@@ -19,8 +19,9 @@
   color-scheme: light dark;
 }
 
+/* Тёмная тема: по системе (если в настройках не выбрана светлая) или принудительно */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --bg: #151816;
     --surface: #1f2421;
     --surface-2: #2a302c;
@@ -36,6 +37,23 @@
     --border: #333a36;
   }
 }
+:root[data-theme='dark'] {
+    --bg: #151816;
+    --surface: #1f2421;
+    --surface-2: #2a302c;
+    --text: #eef0ee;
+    --muted: #a6aea9;
+    --accent: #6fbfab;
+    --accent-soft: #24403a;
+    --accent-text: #0f1a17;
+    --danger: #f2b8b5;
+    --danger-text: #410e0b;
+    --warn-bg: #3d3214;
+    --warn-text: #f5e2b0;
+    --border: #333a36;
+  color-scheme: dark;
+}
+:root[data-theme='light'] { color-scheme: light; }
 
 * { box-sizing: border-box; }
 
@@ -395,7 +413,8 @@ textarea { resize: vertical; }
 
 /* ---------- Цвета серий (различимы и по пунктиру, не только по цвету) ---------- */
 :root { --c1: #2f6f62; --c2: #b35c00; --c3: #6a4bb3; --c-flow: #c2185b; }
-@media (prefers-color-scheme: dark) { :root { --c1: #6fbfab; --c2: #f0a35e; --c3: #b39ddb; --c-flow: #f48fb1; } }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) { --c1: #6fbfab; --c2: #f0a35e; --c3: #b39ddb; --c-flow: #f48fb1; } }
+:root[data-theme='dark'] { --c1: #6fbfab; --c2: #f0a35e; --c3: #b39ddb; --c-flow: #f48fb1; }
 .chart-series { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 .chart-series.v1 { stroke: var(--c1); }
 .chart-series.v2 { stroke: var(--c2); stroke-dasharray: 6 3; }

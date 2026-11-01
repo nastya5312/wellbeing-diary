@@ -6,6 +6,7 @@ import { DATA_VERSION, DEFAULT_SETTINGS } from '../db/defaults';
 import { getSettings } from '../db/repo';
 import { isDateString, isTimeString, localDate } from './dates';
 import { APP_VERSION } from './appInfo';
+import { shareFile } from './share';
 
 export const BACKUP_APP_ID = 'wellbeing-diary';
 export const BACKUP_FORMAT = 2; // 2: добавлены курсы, показатели и значения
@@ -264,27 +265,7 @@ export async function readBackupFile(file: File): Promise<Result> {
  * если не поддерживается — обычное скачивание. Возвращает false, если пользовательница отменила.
  */
 export async function shareBackup(data: BackupFile, how: 'share' | 'download' = 'share'): Promise<boolean> {
-  const name = backupFileName(data.exportedAt);
-  const json = JSON.stringify(data);
-  const file = new File([json], name, { type: 'application/json' });
-  if (how === 'share' && navigator.canShare?.({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: name });
-      return true;
-    } catch (e) {
-      if (e instanceof Error && e.name === 'AbortError') return false;
-      // Другая ошибка — пробуем скачивание
-    }
-  }
-  const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
-  return true;
+  return shareFile(new Blob([JSON.stringify(data)], { type: 'application/json' }), backupFileName(data.exportedAt), how);
 }
 
 /** Нужно ли напоминание о копии. */

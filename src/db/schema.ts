@@ -48,6 +48,35 @@ export class DiaryDB extends Dexie {
         });
       });
 
+    // Версия 3 (ноябрь 2026): схема та же. Симптом «вздутие» гарантированно в чек-листе:
+    // если симптом со словом «вздути…» есть — ставится ★ (если не в архиве), если нет — создаётся «вздутие живота».
+    this.version(3)
+      .stores({
+        days: '&date, completed, updatedAt',
+        items: '&id, kind, name, favorite, archived',
+        events: '&id, date, ts, itemId, kind, [date+ts]',
+        settings: '&key',
+        courses: '&id, itemId, start',
+        metrics: '&id, name',
+        measurements: '&id, metricId, date, [metricId+date]',
+      })
+      .upgrade(async (tx) => {
+        const items = tx.table('items');
+        const all = (await items.toArray()) as Item[];
+        const bloat = all.filter((it) => it.kind === 'symptom' && /вздути/i.test(it.name));
+        if (bloat.length) {
+          for (const it of bloat) if (!it.archived && !it.favorite) await items.update(it.id, { favorite: true });
+        } else {
+          await items.add({
+            id: crypto.randomUUID(), kind: 'symptom', name: 'вздутие живота', tags: [],
+            favorite: true, archived: false, useCount: 0, createdAt: Date.now(),
+          } satisfies Item);
+        }
+        await tx.table('settings').toCollection().modify((s: { version?: number }) => {
+          s.version = 3;
+        });
+      });
+
     // Первое создание базы: настройки по умолчанию и стартовый справочник.
     this.on('populate', (tx) => {
       const now = Date.now();

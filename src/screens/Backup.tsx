@@ -3,6 +3,8 @@ import { getDb } from '../db/schema';
 import { getSettings, updateSettings } from '../db/repo';
 import { createBackup, importBackup, readBackupFile, shareBackup, type BackupFile, type ImportMode } from '../lib/backup';
 import { useLive } from '../lib/useLive';
+import { buildCsvFiles } from '../lib/csv';
+import { shareFiles } from '../lib/share';
 import { safe, notify } from '../lib/notify';
 import { daysBetween, formatDateRu, localDate } from '../lib/dates';
 
@@ -25,6 +27,20 @@ export function Backup({ onBack }: { onBack: () => void }) {
         await updateSettings(db, { lastExportAt: data.exportedAt });
         notify('Копия создана');
       }
+    });
+    setBusy(false);
+  };
+
+  const exportCsv = async () => {
+    setBusy(true);
+    await safe(async () => {
+      const data = await createBackup(db);
+      const stamp = localDate(new Date());
+      const files = buildCsvFiles(data).map((f) => ({
+        name: f.name.replace('.csv', `-${stamp}.csv`),
+        blob: new Blob([f.text], { type: 'text/csv' }),
+      }));
+      await shareFiles(files);
     });
     setBusy(false);
   };
@@ -95,6 +111,17 @@ export function Backup({ onBack }: { onBack: () => void }) {
         <a class="btn btn-link" href="shareddocuments://">
           Открыть «Файлы», чтобы проверить копию
         </a>
+      </section>
+
+      <section class="panel">
+        <h2>Таблицы для Excel / Numbers</h2>
+        <p class="small">
+          5 файлов CSV: записи, дни, показатели, курсы, справочник. Удобно посмотреть или посчитать что-то своё. Для восстановления
+          они не подходят — для этого нужна копия выше.
+        </p>
+        <button type="button" class="btn btn-block" disabled={busy} onClick={() => void exportCsv()}>
+          Сохранить таблицы CSV
+        </button>
       </section>
 
       <section class="panel">

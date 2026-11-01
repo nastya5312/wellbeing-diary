@@ -32,6 +32,14 @@ export function App() {
     };
   }, []);
 
+  // Тема из настроек: «как в iPhone» — без атрибута, иначе принудительно
+  const theme = settings?.theme;
+  useEffect(() => {
+    const root = document.documentElement;
+    if (!theme || theme === 'auto') delete root.dataset.theme;
+    else root.dataset.theme = theme;
+  }, [theme]);
+
   const today = settings ? diaryDate(now, settings.dayStartsAt) : null;
   const openMore = (page: MorePage) => {
     setMorePage(page);

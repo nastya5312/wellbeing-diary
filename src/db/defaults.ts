@@ -1,7 +1,7 @@
 import type { ItemKind, Settings } from '../models/types';
 
 // Текущая версия схемы данных. Увеличивать вместе с новой версией в schema.ts.
-export const DATA_VERSION = 2;
+export const DATA_VERSION = 3;
 
 export const DEFAULT_SETTINGS: Settings = {
   dayStartsAt: '04:00',
@@ -15,7 +15,7 @@ export const DEFAULT_SETTINGS: Settings = {
 
 // Стартовый справочник (ТЗ, раздел 5). Лекарств и добавок нет — их Настя добавляет сама.
 export const STARTER_ITEMS: { kind: ItemKind; name: string }[] = [
-  ...['прыщи', 'головная боль', 'боль внизу живота', 'тошнота', 'вздутие', 'усталость', 'отёки', 'изжога'].map(
+  ...['прыщи', 'головная боль', 'боль внизу живота', 'тошнота', 'вздутие живота', 'усталость', 'отёки', 'изжога'].map(
     (name) => ({ kind: 'symptom' as const, name }),
   ),
   ...['кофе', 'чай', 'алкоголь', 'вода'].map((name) => ({ kind: 'drink' as const, name })),
