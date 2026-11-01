@@ -1,7 +1,7 @@
 import { Icon } from '../components/Icon';
 import { useState } from 'preact/hooks';
 import type { Scale5, Settings, Theme } from '../models/types';
-import { getDb, isDemo, setDemoFlag } from '../db/schema';
+import { getDb } from '../db/schema';
 import { getSettings, updateSettings } from '../db/repo';
 import { DEFAULT_SETTINGS } from '../db/defaults';
 import { Sheet } from '../components/Sheet';
@@ -175,7 +175,7 @@ export function SettingsScreen({ onBack, onOpenBackup }: { onBack: () => void; o
       <section class="panel stack">
         <h2>Удаление</h2>
         <button type="button" class="btn btn-danger btn-block" onClick={() => setDeleting(true)}>
-          {isDemo() ? 'Удалить демо-данные' : 'Удалить все данные'}
+          Удалить все данные
         </button>
       </section>
 
@@ -189,14 +189,12 @@ const CONFIRM_WORD = 'удалить';
 function DeleteAll({ onClose, onOpenBackup }: { onClose: () => void; onOpenBackup: () => void }) {
   const [step, setStep] = useState<1 | 2>(1);
   const [text, setText] = useState('');
-  const demo = isDemo();
 
   const run = async () => {
     const db = getDb();
     db.close();
     await safe(async () => {
       await db.delete();
-      if (demo) setDemoFlag(false);
       location.reload();
     });
   };
@@ -209,11 +207,9 @@ function DeleteAll({ onClose, onOpenBackup }: { onClose: () => void; onOpenBacku
             Будут удалены <b>все</b> записи, справочник, курсы, показатели и настройки на этом телефоне. Восстановить их можно только
             из резервной копии.
           </p>
-          {!demo && (
-            <button type="button" class="btn btn-block" onClick={onOpenBackup}>
-              Сначала сохранить копию
-            </button>
-          )}
+          <button type="button" class="btn btn-block" onClick={onOpenBackup}>
+            Сначала сохранить копию
+          </button>
           <button type="button" class="btn btn-danger btn-block" onClick={() => setStep(2)}>
             Продолжить удаление
           </button>

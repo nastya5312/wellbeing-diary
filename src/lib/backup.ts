@@ -66,6 +66,7 @@ function checkItem(x: unknown): string | null {
   if (!isStr(x.name) || !x.name.trim()) return 'у позиции нет названия';
   if (!Array.isArray(x.tags) || !x.tags.every(isStr)) return `неверные теги у «${x.name}»`;
   if (typeof x.favorite !== 'boolean' || typeof x.archived !== 'boolean') return `неверные флаги у «${x.name}»`;
+  if (x.usual !== undefined && typeof x.usual !== 'boolean') return `неверные флаги у «${x.name}»`;
   if (!isNum(x.useCount) || !isNum(x.createdAt)) return `неверные числа у «${x.name}»`;
   return null;
 }

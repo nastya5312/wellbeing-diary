@@ -175,6 +175,16 @@ export function Today({ date, today, settings, onOpenBackup, onOpenCatalog, onBa
         <DayRing done={doneCount} total={checkins.length} completed={!!day?.completed} />
       </header>
 
+      {isToday && hasData === false && onOpenBackup && (
+        <button type="button" class="banner banner-info" onClick={onOpenBackup}>
+          <IconBadge name="backup" tone="accent" size={32} />
+          <span class="grow">
+            Уже вела дневник раньше? <u>Восстановить из копии</u>
+          </span>
+          <Icon name="chevron" size={18} class="chev" />
+        </button>
+      )}
+
       {needBackup && onOpenBackup && (
         <button type="button" class="banner" onClick={onOpenBackup}>
           <IconBadge name="backup" tone="warn" size={32} />

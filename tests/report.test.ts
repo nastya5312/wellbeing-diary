@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildReport } from '../src/lib/report';
-import { generateDemo } from '../src/lib/demo';
+import { generateDemo } from './demoData';
 import { analyze } from '../src/analysis/analyze';
 import { DEFAULT_SETTINGS } from '../src/db/defaults';
 import type { DiaryEvent, Item } from '../src/models/types';

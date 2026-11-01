@@ -6,8 +6,7 @@ import { Today } from './screens/Today';
 import { CalendarTab } from './screens/Calendar';
 import { More, type MorePage } from './screens/More';
 import { Insights } from './screens/Insights';
-import { getDb, isDemo } from './db/schema';
-import { exitDemo } from './lib/demo';
+import { cleanupLegacyDemo, getDb } from './db/schema';
 import { getSettings } from './db/repo';
 import { diaryDate } from './lib/dates';
 import { useLive } from './lib/useLive';
@@ -21,6 +20,7 @@ export function App() {
 
   useEffect(() => {
     void requestPersistentStorage();
+    cleanupLegacyDemo();
     // Дата «сегодня» обновляется, когда приложение снова открывают (например, утром) и раз в минуту
     const tick = () => setNow(Date.now());
     const onVisible = () => document.visibilityState === 'visible' && tick();
@@ -48,16 +48,6 @@ export function App() {
 
   return (
     <div class="app">
-      {isDemo() && (
-        <div class="demo-bar no-print" role="status">
-          <span>
-            <b>Демо-режим.</b> Вымышленные данные, твои записи скрыты и не меняются.
-          </span>
-          <button type="button" class="btn btn-small" onClick={() => void exitDemo()}>
-            Выйти
-          </button>
-        </div>
-      )}
       <main class="app-main">
         {settings && today && tab === 'today' && (
           <Today

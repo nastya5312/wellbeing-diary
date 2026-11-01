@@ -99,25 +99,18 @@ export class DiaryDB extends Dexie {
 
 let instance: DiaryDB | null = null;
 
-/** Демо-режим: отдельная база с вымышленными данными. Настоящая база в нём не открывается и не меняется. */
-export const DEMO_DB_NAME = 'wellbeing-diary-demo';
-const DEMO_FLAG = 'demo-mode';
-
-export function isDemo(): boolean {
+/** Остатки удалённого демо-режима (версии 0.10–1.1): флаг и отдельная база. Убираются при запуске. */
+export function cleanupLegacyDemo(): void {
   try {
-    return localStorage.getItem(DEMO_FLAG) === '1';
+    localStorage.removeItem('demo-mode');
   } catch {
-    return false;
+    /* нет доступа — нечего убирать */
   }
+  void Dexie.delete('wellbeing-diary-demo').catch(() => undefined);
 }
 
-export function setDemoFlag(on: boolean): void {
-  if (on) localStorage.setItem(DEMO_FLAG, '1');
-  else localStorage.removeItem(DEMO_FLAG);
-}
-
-/** Общая база приложения (в демо-режиме — демо-база). */
+/** Общая база приложения. */
 export function getDb(): DiaryDB {
-  instance ??= new DiaryDB(isDemo() ? DEMO_DB_NAME : DB_NAME);
+  instance ??= new DiaryDB(DB_NAME);
   return instance;
 }

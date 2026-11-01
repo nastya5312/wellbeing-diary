@@ -38,6 +38,8 @@ export type Item = {
   name: string;
   tags: string[];
   favorite: boolean;
+  /** Входит в «Как обычно»: отмечается одной кнопкой (выбирает сама пользовательница) */
+  usual?: boolean;
   archived: boolean;
   useCount: number;
   createdAt: number;

@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import type { Course, DiaryEvent, Item, ItemKind, Scale5 } from '../models/types';
 import { getDb } from '../db/schema';
-import { addEvent, deleteEvent, updateEvent } from '../db/repo';
+import { addEvent, deleteEvent, updateEvent, updateItem } from '../db/repo';
 import { courseStatus } from '../db/courses';
 import { safe, notify } from '../lib/notify';
 import { localTime, tsFromDiaryDate } from '../lib/dates';
@@ -53,6 +53,7 @@ export function Checklist({ date, tsFor, items, events, courses, onEmptyHint, da
   const [askIntensity, setAskIntensity] = useState<{ ev: DiaryEvent; name: string } | null>(null);
   const [creating, setCreating] = useState<ItemKind | null>(null);
   const [timeFor, setTimeFor] = useState<{ ev: DiaryEvent; name: string } | null>(null);
+  const [setupUsual, setSetupUsual] = useState(false);
 
   const toggleGroup = (kind: string) => {
     const next = new Set(collapsed);
@@ -93,10 +94,13 @@ export function Checklist({ date, tsFor, items, events, courses, onEmptyHint, da
     }
   };
 
-  const markRoutine = async (group: Item[]) => {
-    const todo = group.filter((it) => !todayEvents.has(it.id) && !isPaused(it));
+  // «Как обычно»: позиции, которые выбрала сама пользовательница (флаг usual)
+  const usual = items.filter((it) => it.usual && !it.archived);
+  const usualTodo = usual.filter((it) => !todayEvents.has(it.id) && !isPaused(it));
+  const markUsual = async () => {
+    const todo = usualTodo;
     if (!todo.length) {
-      notify('Всё уже отмечено');
+      notify('Всё из «Как обычно» уже отмечено');
       return;
     }
     const now = tsFor();
@@ -127,12 +131,24 @@ export function Checklist({ date, tsFor, items, events, courses, onEmptyHint, da
 
   return (
     <section class="checklist" aria-label="Чек-лист">
+      <div class="usual-bar">
+        {usual.length > 0 ? (
+          <button type="button" class="btn btn-primary usual-btn" disabled={!usualTodo.length} onClick={() => void markUsual()}>
+            <Icon name="check" size={18} />
+            {usualTodo.length ? `Всё как обычно · ${usualTodo.length}` : 'Как обычно — отмечено'}
+          </button>
+        ) : (
+          <span class="muted small grow">Частые отметки можно ставить одной кнопкой.</span>
+        )}
+        <button type="button" class="btn btn-small" onClick={() => setSetupUsual(true)}>
+          {usual.length ? 'Настроить' : 'Настроить «Как обычно»'}
+        </button>
+      </div>
       {ORDER.map((kind) => {
         const group = favorites.filter((it) => it.kind === kind).sort((a, b) => a.createdAt - b.createdAt);
         if (!group.length) return null;
         const isOpen = !collapsed.has(kind);
         const marked = group.filter((it) => todayEvents.has(it.id)).length;
-        const active = group.filter((it) => !isPaused(it));
         return (
           <div key={kind} class="check-group">
             <div class="group-head">
@@ -201,11 +217,6 @@ export function Checklist({ date, tsFor, items, events, courses, onEmptyHint, da
                 })}
               </div>
             )}
-            {isOpen && ROUTINE.includes(kind) && active.length > 1 && marked < active.length && (
-              <button type="button" class="btn btn-link routine-btn" onClick={() => void markRoutine(group)}>
-                <Icon name="check" size={18} /> Отметить всё как обычно
-              </button>
-            )}
           </div>
         );
       })}
@@ -250,6 +261,7 @@ export function Checklist({ date, tsFor, items, events, courses, onEmptyHint, da
           </button>
         </Sheet>
       )}
+      {setupUsual && <UsualSetup items={favorites} onClose={() => setSetupUsual(false)} />}
       {timeFor && (
         <TimeSheet
           name={timeFor.name}
@@ -286,6 +298,44 @@ function TimeSheet({ name, initial, onClose, onSave }: { name: string; initial: 
         <input type="time" value={time} required onInput={(e) => e.currentTarget.value && setTime(e.currentTarget.value)} />
       </label>
       <p class="muted small">Точное время нужно для интервалов между лекарством, едой и добавками.</p>
+    </Sheet>
+  );
+}
+
+/** Выбор позиций для «Как обычно». Изменения сохраняются сразу. */
+function UsualSetup({ items, onClose }: { items: Item[]; onClose: () => void }) {
+  const db = getDb();
+  const toggle = (it: Item) => void safe(() => updateItem(db, it.id, { usual: !it.usual }));
+  return (
+    <Sheet
+      title="«Как обычно»"
+      onClose={onClose}
+      footer={
+        <button type="button" class="btn btn-primary btn-block" onClick={onClose}>
+          Готово
+        </button>
+      }
+    >
+      <p class="muted small" style={{ marginTop: 0 }}>
+        Отметь, что у тебя бывает каждый день. Кнопка «Всё как обычно» отметит это одним касанием. Новые позиции сюда сами не
+        попадают. Позиции на паузе (курс приёма закончен) пропускаются.
+      </p>
+      {ORDER.map((kind) => {
+        const group = items.filter((it) => it.kind === kind);
+        if (!group.length) return null;
+        return (
+          <div key={kind} class="stack" style={{ marginTop: '14px', gap: '0' }}>
+            <h3>{KIND_PLURAL[kind]}</h3>
+            {group.map((it) => (
+              <label class="check" key={it.id}>
+                <input type="checkbox" checked={!!it.usual} onChange={() => toggle(it)} />
+                <span>{it.name}</span>
+              </label>
+            ))}
+          </div>
+        );
+      })}
+      {!items.length && <p>Сначала добавь позиции в чек-лист (звёздочка ★ в справочнике).</p>}
     </Sheet>
   );
 }

@@ -1,10 +1,7 @@
-// Демо-данные (ТЗ, 13.3): вымышленный дневник, чтобы посмотреть анализ, не вводя свои записи.
-// Живут в отдельной базе DEMO_DB_NAME. Вход и выход перезагружают приложение; при выходе демо-база удаляется.
-import Dexie from 'dexie';
-import type { Day, DiaryEvent, Item, Measurement, Metric } from '../models/types';
-import { DEMO_DB_NAME, DiaryDB, getDb, setDemoFlag } from '../db/schema';
-import { rng } from '../analysis/permutation';
-import { addDays, tsFromDiaryDate } from './dates';
+// Вымышленный дневник для проверки анализа и отчёта (только тесты; в приложении демо-режима нет).
+import type { Day, DiaryEvent, Item, Measurement, Metric } from '../src/models/types';
+import { rng } from '../src/analysis/permutation';
+import { addDays, tsFromDiaryDate } from '../src/lib/dates';
 
 const DAYS = 120;
 
@@ -86,32 +83,3 @@ export function generateDemo(today: string, dayStartsAt: string, seed = 2026) {
   return { items, days, events, metrics, measurements };
 }
 
-/** Войти в демо: создать демо-базу с вымышленными данными и перезапустить приложение. */
-export async function enterDemo(today: string, dayStartsAt: string): Promise<void> {
-  await Dexie.delete(DEMO_DB_NAME);
-  const db = new DiaryDB(DEMO_DB_NAME);
-  await db.open();
-  const d = generateDemo(today, dayStartsAt);
-  await db.transaction('rw', [db.items, db.days, db.events, db.metrics, db.measurements], async () => {
-    await db.items.clear();
-    await db.items.bulkAdd(d.items);
-    await db.days.bulkAdd(d.days);
-    await db.events.bulkAdd(d.events);
-    await db.metrics.bulkAdd(d.metrics);
-    await db.measurements.bulkAdd(d.measurements);
-  });
-  db.close();
-  setDemoFlag(true);
-  location.reload();
-}
-
-/** Выйти из демо: удалить демо-базу и вернуться к своим записям. */
-export async function exitDemo(): Promise<void> {
-  setDemoFlag(false);
-  getDb().close();
-  try {
-    await Dexie.delete(DEMO_DB_NAME);
-  } finally {
-    location.reload();
-  }
-}

@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { DiaryDB } from '../src/db/schema';
-import { addEvent, addItem, saveDay, updateSettings, listItems } from '../src/db/repo';
+import { addEvent, addItem, saveDay, updateSettings, listItems, updateItem } from '../src/db/repo';
 import { addMeasurement, addMetric, startCourse, endCourse } from '../src/db/courses';
 import { backupOverdue, createBackup, importBackup, validateBackup, type BackupFile } from '../src/lib/backup';
 
@@ -22,6 +22,7 @@ async function fill() {
   await updateSettings(db, { dayStartsAt: '05:00' });
   const food = await addItem(db, { kind: 'food', name: 'Тестовая каша', tags: ['глютен'], favorite: true });
   const med = await addItem(db, { kind: 'med', name: 'Препарат-Тест' });
+  await updateItem(db, med.id, { usual: true });
   const [sym] = await listItems(db, { kind: 'symptom' });
   await addEvent(db, { itemId: food.id, ts: at('2026-11-01T08:00:00'), note: 'вымысел' });
   await addEvent(db, { itemId: med.id, ts: at('2026-11-01T09:00:00'), amountText: '1 шт.' });
