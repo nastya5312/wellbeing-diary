@@ -1,51 +1,47 @@
 import { useEffect, useState } from 'preact/hooks';
-import { APP_NAME, APP_VERSION } from './lib/appInfo';
 import { UpdateToast } from './components/UpdateToast';
+import { Notices } from './components/Notices';
+import { TabBar, type Tab } from './components/TabBar';
+import { Today } from './screens/Today';
+import { More } from './screens/More';
+import { Placeholder } from './screens/Placeholder';
 import { getDb } from './db/schema';
 import { getSettings } from './db/repo';
-import { diaryDate, weekdayRu } from './lib/dates';
-import { requestPersistentStorage, storageErrorMessage } from './lib/storage';
+import { diaryDate } from './lib/dates';
+import { useLive } from './lib/useLive';
+import { requestPersistentStorage } from './lib/storage';
 
-// Этап 2: база подключается при старте. Экраны и вкладки появятся на этапе 3.
 export function App() {
-  const [today, setToday] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>('today');
+  const settings = useLive(() => getSettings(getDb()), []);
+  const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
     void requestPersistentStorage();
-    getSettings(getDb())
-      .then((s) => setToday(diaryDate(Date.now(), s.dayStartsAt)))
-      .catch((e: unknown) => setError(storageErrorMessage(e)));
+    // Дата «сегодня» обновляется, когда приложение снова открывают (например, утром) и раз в минуту
+    const tick = () => setNow(Date.now());
+    const onVisible = () => document.visibilityState === 'visible' && tick();
+    document.addEventListener('visibilitychange', onVisible);
+    const id = setInterval(tick, 60_000);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      clearInterval(id);
+    };
   }, []);
+
+  const today = settings ? diaryDate(now, settings.dayStartsAt) : null;
 
   return (
     <div class="app">
-      <header class="app-header">
-        <h1>Дневник</h1>
-      </header>
       <main class="app-main">
-        {error && (
-          <p class="error" role="alert">
-            {error}
-          </p>
-        )}
-        {today && (
-          <p>
-            Сегодня: {formatDateRu(today)}, {weekdayRu(today)}
-          </p>
-        )}
-        <p>Здесь скоро появится экран «Сегодня».</p>
-        <p class="muted small">Все записи хранятся только на этом телефоне.</p>
-        <p class="muted small">
-          {APP_NAME} · версия {APP_VERSION}
-        </p>
+        {settings && today && tab === 'today' && <Today today={today} settings={settings} />}
+        {tab === 'calendar' && <Placeholder title="Календарь" text="Календарь и графики появятся на этапе 4." />}
+        {tab === 'insights' && <Placeholder title="Анализ" text="Анализ появится на этапах 5–7." />}
+        {tab === 'more' && <More />}
       </main>
+      <TabBar tab={tab} onChange={setTab} />
+      <Notices />
       <UpdateToast />
     </div>
   );
-}
-
-function formatDateRu(date: string): string {
-  const [y, m, d] = date.split('-');
-  return `${d}.${m}.${y}`;
 }

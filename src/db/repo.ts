@@ -3,7 +3,8 @@
 import type { DiaryDB } from './schema';
 import type { Day, DiaryEvent, Item, ItemKind, Settings } from '../models/types';
 import { DEFAULT_SETTINGS } from './defaults';
-import { diaryDate, isDateString, isTimeString } from '../lib/dates';
+import { addDays, diaryDate, isDateString, isTimeString } from '../lib/dates';
+import { isSimilarName } from '../lib/similar';
 
 // ---------- Настройки ----------
 
@@ -95,6 +96,63 @@ export async function listItems(db: DiaryDB, opts: { kind?: ItemKind; includeArc
   return all.filter((it) => opts.includeArchived || !it.archived).sort((a, b) => a.createdAt - b.createdAt);
 }
 
+/** Похожие позиции того же типа (включая архивные) — подсказка против дублей. */
+export async function findSimilarItems(db: DiaryDB, kind: ItemKind, name: string): Promise<Item[]> {
+  if (!name.trim()) return [];
+  const all = await db.items.where('kind').equals(kind).toArray();
+  return all.filter((it) => isSimilarName(it.name, name));
+}
+
+/** Сколько событий у позиции. */
+export async function countItemEvents(db: DiaryDB, itemId: string): Promise<number> {
+  return db.events.where('itemId').equals(itemId).count();
+}
+
+/** Удаление позиции. Разрешено только без событий — иначе архив или объединение. */
+export async function deleteItem(db: DiaryDB, id: string): Promise<void> {
+  await db.transaction('rw', db.items, db.events, async () => {
+    if ((await db.events.where('itemId').equals(id).count()) > 0) {
+      throw new Error('У позиции есть записи. Её можно отправить в архив или объединить с другой.');
+    }
+    await db.items.delete(id);
+  });
+}
+
+/**
+ * Объединение дублей: все события позиции sourceId переносятся на targetId,
+ * теги и счётчики складываются, sourceId удаляется. Позиции должны быть одного типа.
+ */
+export async function mergeItems(db: DiaryDB, sourceId: string, targetId: string): Promise<void> {
+  if (sourceId === targetId) throw new Error('Нельзя объединить позицию саму с собой');
+  await db.transaction('rw', db.items, db.events, async () => {
+    const [src, dst] = await Promise.all([db.items.get(sourceId), db.items.get(targetId)]);
+    if (!src || !dst) throw new Error('Позиция не найдена');
+    if (src.kind !== dst.kind) throw new Error('Объединять можно только позиции одного типа');
+    await db.events.where('itemId').equals(sourceId).modify({ itemId: targetId });
+    await db.items.update(targetId, {
+      tags: normalizeTags([...dst.tags, ...src.tags]),
+      useCount: dst.useCount + src.useCount,
+      favorite: dst.favorite || src.favorite,
+      archived: dst.archived && src.archived,
+    });
+    await db.items.delete(sourceId);
+  });
+}
+
+/** Недавно использованные позиции типа kind (по последним событиям), без архивных. */
+export async function listRecentItems(db: DiaryDB, kind: ItemKind, limit = 8): Promise<Item[]> {
+  const ids: string[] = [];
+  await db.events
+    .orderBy('ts')
+    .reverse()
+    .until(() => ids.length >= limit)
+    .each((e) => {
+      if (e.kind === kind && !ids.includes(e.itemId)) ids.push(e.itemId);
+    });
+  const items = await db.items.bulkGet(ids);
+  return items.filter((it): it is Item => !!it && !it.archived);
+}
+
 function normalizeTags(tags: string[]): string[] {
   return [...new Set(tags.map((t) => t.trim().toLowerCase()).filter(Boolean))];
 }
@@ -150,6 +208,26 @@ export async function deleteEvent(db: DiaryDB, id: string): Promise<void> {
 /** События одного дня по времени. */
 export async function listEventsByDate(db: DiaryDB, date: string): Promise<DiaryEvent[]> {
   return db.events.where('[date+ts]').between([date, -Infinity], [date, Infinity]).toArray();
+}
+
+/** Даты с месячными (flow > 0) в диапазоне — для дня цикла. */
+export async function listFlowDates(db: DiaryDB, from: string, to: string): Promise<string[]> {
+  return (await listDays(db, from, to)).filter((d) => (d.flow ?? 0) > 0).map((d) => d.date);
+}
+
+/** Есть ли записи раньше даты date (чтобы не напоминать «вчера не отмечен» в самый первый день). */
+export async function hasDataBefore(db: DiaryDB, date: string): Promise<boolean> {
+  const day = await db.days.where('date').below(date).first();
+  if (day) return true;
+  return (await db.events.where('date').below(date).count()) > 0;
+}
+
+/** Вчерашняя дата дневника, если она не отмечена как заполненная и пользование уже началось. */
+export async function unfinishedYesterday(db: DiaryDB, today: string): Promise<string | null> {
+  const y = addDays(today, -1);
+  const day = await db.days.get(y);
+  if (day?.completed) return null;
+  return (await hasDataBefore(db, today)) ? y : null;
 }
 
 /** События в диапазоне дат [from, to] включительно. */

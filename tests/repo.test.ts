@@ -4,7 +4,8 @@ import { DiaryDB } from '../src/db/schema';
 import { DEFAULT_SETTINGS } from '../src/db/defaults';
 import {
   addEvent, addItem, deleteEvent, getDay, getSettings, listDays, listEventsByDate, listEventsRange,
-  listItems, saveDay, updateEvent, updateItem, updateSettings,
+  listItems, saveDay, updateEvent, updateItem, updateSettings, mergeItems, deleteItem, findSimilarItems,
+  listRecentItems, countItemEvents, listFlowDates, unfinishedYesterday,
 } from '../src/db/repo';
 
 // Только вымышленные данные. Каждая проверка — на своей чистой базе.
@@ -144,5 +145,66 @@ describe('сохранность', () => {
     // Стартовый справочник не добавляется повторно
     expect(await reopened.items.where('kind').equals('symptom').count()).toBe(8);
     db = reopened; // удалится в afterEach
+  });
+});
+
+describe('справочник: дубли, объединение, удаление', () => {
+  it('похожие позиции находятся только своего типа', async () => {
+    await addItem(db, { kind: 'food', name: 'Тестовый йогурт' });
+    expect((await findSimilarItems(db, 'food', 'тестовый йогурт ')).map((i) => i.name)).toEqual(['Тестовый йогурт']);
+    expect(await findSimilarItems(db, 'drink', 'тестовый йогурт')).toHaveLength(0);
+    expect((await findSimilarItems(db, 'drink', 'Кофе')).map((i) => i.name)).toEqual(['кофе']);
+  });
+  it('объединение переносит события, теги и счётчики', async () => {
+    const a = await addItem(db, { kind: 'food', name: 'Блюдо-А', tags: ['молочное'] });
+    const b = await addItem(db, { kind: 'food', name: 'блюдо а', tags: ['сахар'], favorite: true });
+    await addEvent(db, { itemId: a.id, ts: at('2026-11-01T10:00:00') });
+    await addEvent(db, { itemId: b.id, ts: at('2026-11-01T12:00:00') });
+    await addEvent(db, { itemId: b.id, ts: at('2026-11-02T12:00:00') });
+    await mergeItems(db, b.id, a.id);
+    expect(await db.items.get(b.id)).toBeUndefined();
+    const merged = await db.items.get(a.id);
+    expect(merged?.tags.sort()).toEqual(['молочное', 'сахар']);
+    expect(merged?.useCount).toBe(3);
+    expect(merged?.favorite).toBe(true);
+    expect(await countItemEvents(db, a.id)).toBe(3);
+  });
+  it('нельзя объединить разные типы', async () => {
+    const a = await addItem(db, { kind: 'food', name: 'Блюдо' });
+    const b = await addItem(db, { kind: 'med', name: 'Лекарство-Бета' });
+    await expect(mergeItems(db, b.id, a.id)).rejects.toThrow();
+  });
+  it('позицию с событиями удалить нельзя, без событий — можно', async () => {
+    const a = await addItem(db, { kind: 'food', name: 'Блюдо' });
+    const b = await addItem(db, { kind: 'food', name: 'Другое блюдо' });
+    await addEvent(db, { itemId: a.id, ts: Date.now() });
+    await expect(deleteItem(db, a.id)).rejects.toThrow(/архив/);
+    await deleteItem(db, b.id);
+    expect(await db.items.get(b.id)).toBeUndefined();
+  });
+});
+
+describe('недавние, месячные, вчерашний день', () => {
+  it('недавние — по последним событиям, без повторов и архивных', async () => {
+    const [x, y, z] = await Promise.all(['Е-1', 'Е-2', 'Е-3'].map((name) => addItem(db, { kind: 'food', name })));
+    await addEvent(db, { itemId: x!.id, ts: at('2026-11-01T08:00:00') });
+    await addEvent(db, { itemId: y!.id, ts: at('2026-11-01T09:00:00') });
+    await addEvent(db, { itemId: x!.id, ts: at('2026-11-01T10:00:00') });
+    await addEvent(db, { itemId: z!.id, ts: at('2026-11-01T11:00:00') });
+    await updateItem(db, z!.id, { archived: true });
+    expect((await listRecentItems(db, 'food')).map((i) => i.name)).toEqual(['Е-1', 'Е-2']);
+  });
+  it('даты месячных', async () => {
+    await saveDay(db, '2026-11-01', { flow: 2 });
+    await saveDay(db, '2026-11-02', { flow: 0 });
+    expect(await listFlowDates(db, '2026-10-01', '2026-11-30')).toEqual(['2026-11-01']);
+  });
+  it('напоминание о вчерашнем дне', async () => {
+    // Первый день пользования — не напоминаем
+    expect(await unfinishedYesterday(db, '2026-11-05')).toBeNull();
+    await saveDay(db, '2026-11-03', { completed: true });
+    expect(await unfinishedYesterday(db, '2026-11-05')).toBe('2026-11-04');
+    await saveDay(db, '2026-11-04', { completed: true });
+    expect(await unfinishedYesterday(db, '2026-11-05')).toBeNull();
   });
 });
