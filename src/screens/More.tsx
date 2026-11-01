@@ -3,6 +3,7 @@ import { Backup } from './Backup';
 import { Metrics } from './Metrics';
 import { Report } from './Report';
 import { SettingsScreen } from './SettingsScreen';
+import { Shortcuts } from './Shortcuts';
 import { isDemo } from '../db/schema';
 import { enterDemo } from '../lib/demo';
 import { safe } from '../lib/notify';
@@ -10,12 +11,13 @@ import type { Settings } from '../models/types';
 import { StorageStatus } from '../components/StorageStatus';
 import { APP_NAME, APP_VERSION } from '../lib/appInfo';
 
-export type MorePage = 'menu' | 'catalog' | 'backup' | 'metrics' | 'report' | 'settings';
+export type MorePage = 'menu' | 'catalog' | 'backup' | 'metrics' | 'report' | 'settings' | 'shortcuts';
 
 export function More({ page, setPage, today, settings }: { page: MorePage; setPage: (p: MorePage) => void; today: string; settings: Settings }) {
   if (page === 'catalog') return <Catalog onBack={() => setPage('menu')} />;
   if (page === 'backup') return <Backup onBack={() => setPage('menu')} />;
   if (page === 'metrics') return <Metrics onBack={() => setPage('menu')} />;
+  if (page === 'shortcuts') return <Shortcuts onBack={() => setPage('menu')} />;
   if (page === 'settings') return <SettingsScreen onBack={() => setPage('menu')} onOpenBackup={() => setPage('backup')} />;
   if (page === 'report') return <Report today={today} onBack={() => setPage('menu')} />;
 
@@ -52,6 +54,12 @@ export function More({ page, setPage, today, settings }: { page: MorePage; setPa
           <button type="button" class="list-btn" onClick={() => setPage('catalog')}>
             <span>Справочник</span>
             <span class="muted small">добавить и изменить позиции, курсы приёма, вставить список</span>
+          </button>
+        </li>
+        <li>
+          <button type="button" class="list-btn" onClick={() => setPage('shortcuts')}>
+            <span>Напоминания и шаги</span>
+            <span class="muted small">напоминания через «Команды», шаги из «Здоровья»</span>
           </button>
         </li>
         <li>
