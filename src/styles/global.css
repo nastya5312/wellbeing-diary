@@ -1,0 +1,90 @@
+/* Цвета и размеры. Тема по системе: светлая/тёмная. */
+:root {
+  --bg: #f6f5f1;
+  --surface: #ffffff;
+  --text: #1c1f1d;
+  --muted: #5b625e; /* контраст к --bg ≥ 4.5:1 (AA) */
+  --accent: #2f6f62;
+  --accent-text: #ffffff;
+  --border: #dcdad3;
+  --radius: 14px;
+  --tap: 44px; /* минимальный размер кнопки (iOS HIG) */
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #151816;
+    --surface: #1f2421;
+    --text: #eef0ee;
+    --muted: #a6aea9;
+    --accent: #6fbfab;
+    --accent-text: #0f1a17;
+    --border: #333a36;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  /* Системный шрифт, поддержка увеличенного шрифта iOS (Dynamic Type) */
+  font: -apple-system-body;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.45;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Поля ввода не меньше 16px — иначе iOS приближает страницу при фокусе */
+input, select, textarea, button { font: inherit; font-size: max(16px, 1rem); }
+
+.app { min-height: 100dvh; display: flex; flex-direction: column; }
+
+.app-header {
+  padding: calc(env(safe-area-inset-top) + 12px) calc(env(safe-area-inset-right) + 16px) 12px calc(env(safe-area-inset-left) + 16px);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.app-header h1 { margin: 0; font-size: 1.6rem; }
+
+.app-main {
+  flex: 1;
+  padding: 16px calc(env(safe-area-inset-right) + 16px) calc(env(safe-area-inset-bottom) + 16px) calc(env(safe-area-inset-left) + 16px);
+}
+
+.muted { color: var(--muted); }
+.small { font-size: 0.9rem; }
+
+.btn {
+  min-height: var(--tap);
+  min-width: var(--tap);
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.toast {
+  position: fixed;
+  left: calc(env(safe-area-inset-left) + 12px);
+  right: calc(env(safe-area-inset-right) + 12px);
+  bottom: calc(env(safe-area-inset-bottom) + 12px);
+  display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.18);
+}
+.toast-actions { display: flex; gap: 8px; }
