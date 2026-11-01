@@ -440,3 +440,21 @@ textarea { resize: vertical; }
 .d-med { background: var(--c1); }
 .d-food { background: var(--c2); }
 .cal-legend { margin: 10px 0 4px; }
+
+/* ---------- Анализ ---------- */
+.disclaimer { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); font-size: 0.9rem; }
+.progress { height: 12px; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
+.progress > div { height: 100%; background: var(--accent); }
+.insight { display: flex; flex-direction: column; gap: 6px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.insight-strong { border-left: 5px solid var(--accent); }
+.insight-notable { border-left: 5px solid var(--c2); }
+.insight-title { margin: 0; font-size: 1rem; color: var(--text); font-weight: 600; }
+.insight p { margin: 0; }
+.insight-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--text); }
+.badge-outline { background: none; border: 1px solid var(--border); color: var(--muted); }
+.insight-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.note { padding: 6px 10px; border-radius: 8px; background: var(--surface-2); }
+.hidden-row { gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+details summary { cursor: pointer; font-weight: 600; min-height: var(--tap); display: flex; align-items: center; }
+details ul { margin: 8px 0 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 6px; }

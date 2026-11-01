@@ -62,6 +62,8 @@ export type Settings = {
   theme: Theme;
   lastExportAt?: number;
   version: number; // версия схемы данных
+  hiddenInsights?: string[]; // id скрытых выводов (ТЗ, 7.10)
+  insightNotes?: Record<string, string>; // заметки к выводам
 };
 
 // Курс приёма лекарства/добавки: «принимаю с … », «на паузе с … ». Нужен анализу, чтобы сравнивать периоды.

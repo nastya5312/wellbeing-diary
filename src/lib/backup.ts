@@ -178,6 +178,8 @@ export function validateBackup(raw: unknown): Result {
   }
   const s = raw.settings;
   if (s.dayStartsAt !== undefined && !(isStr(s.dayStartsAt) && isTimeString(s.dayStartsAt))) return fail('неверная граница дня');
+  if (s.hiddenInsights !== undefined && !(Array.isArray(s.hiddenInsights) && s.hiddenInsights.every(isStr))) return fail('неверный список скрытых выводов');
+  if (s.insightNotes !== undefined && !(isObj(s.insightNotes) && Object.values(s.insightNotes).every(isStr))) return fail('неверные заметки к выводам');
   return {
     ok: true,
     data: {

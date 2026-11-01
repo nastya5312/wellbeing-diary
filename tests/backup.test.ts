@@ -101,6 +101,9 @@ describe('резервная копия', () => {
     expect(bad({ days: [{ ...ok.days[0], wellbeing: { mood: 9 } }] }).ok).toBe(false);
     expect(bad({ courses: [{ ...ok.courses[0], itemId: 'нет' }] }).ok).toBe(false);
     expect(bad({ measurements: [{ ...ok.measurements[0], value: 'много' }] }).ok).toBe(false);
+    expect(bad({ settings: { ...ok.settings, hiddenInsights: 'всё' } }).ok).toBe(false);
+    expect(bad({ settings: { ...ok.settings, insightNotes: { a: 1 } } }).ok).toBe(false);
+    expect(bad({ settings: { ...ok.settings, hiddenInsights: ['x'], insightNotes: { x: 'заметка' } } }).ok).toBe(true);
   });
 
   it('файл старого формата 1 (без курсов и показателей) принимается', async () => {
