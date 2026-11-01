@@ -4,6 +4,7 @@ import { getSettings, updateSettings } from '../db/repo';
 import { loadTimeline, runAnalysis, type UiResult } from '../analysis/run';
 import { RepeatsCard } from '../components/RepeatsCard';
 import { WhyPanel } from '../components/WhyPanel';
+import { Experiments } from '../components/Experiments';
 import { Icon, IconBadge } from '../components/Icon';
 import type { Correlation, Signal } from '../analysis/analyze';
 import {
@@ -17,7 +18,7 @@ import { formatDateRu } from '../lib/dates';
 
 const fmtQ = (q: number) => (q < 0.001 ? 'q < 0,001' : `q = ${q.toFixed(3).replace('.', ',')}`);
 
-export function Insights({ onOpenReport }: { onOpenReport?: () => void }) {
+export function Insights({ onOpenReport, today }: { onOpenReport?: () => void; today?: string }) {
   const db = getDb();
   const settings = useLive(() => getSettings(db), []);
   const timeline = useLive(() => loadTimeline(db), []);
@@ -97,6 +98,7 @@ export function Insights({ onOpenReport }: { onOpenReport?: () => void }) {
         </section>
       )}
       {whyId && <WhyPanel symptomId={whyId} onClose={() => setWhyId(null)} />}
+      {today && <Experiments today={today} />}
 
       {!result && busy && <p class="muted">Считаю…</p>}
 

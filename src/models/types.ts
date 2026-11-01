@@ -70,6 +70,7 @@ export type Settings = {
   version: number; // версия схемы данных
   hiddenInsights?: string[]; // id скрытых выводов (ТЗ, 7.10)
   insightNotes?: Record<string, string>; // заметки к выводам
+  experiments?: Experiment[]; // «Мои эксперименты»
 };
 
 // Курс приёма лекарства/добавки: «принимаю с … », «на паузе с … ». Нужен анализу, чтобы сравнивать периоды.
@@ -101,4 +102,15 @@ export type Measurement = {
   ts: number;
   value: number;
   note?: string;
+};
+
+// Эксперимент: период, который пользовательница задаёт сама (например, «2 недели без молочного»).
+// Приложение только сравнивает записи до и во время — без советов, что менять.
+export type Experiment = {
+  id: string;
+  name: string;
+  start: string; // 'YYYY-MM-DD'
+  end: string; // 'YYYY-MM-DD', последний день (включительно)
+  note?: string;
+  createdAt: number;
 };

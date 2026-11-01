@@ -12,6 +12,7 @@ import { SwipeRow } from '../components/SwipeRow';
 import { Checklist } from '../components/Checklist';
 import { DailyMetrics } from '../components/DailyMetrics';
 import { WhyPanel } from '../components/WhyPanel';
+import { QuickLine } from '../components/QuickLine';
 import { Icon, IconBadge } from '../components/Icon';
 import { useLive } from '../lib/useLive';
 import { safe, notify } from '../lib/notify';
@@ -83,6 +84,7 @@ export function Today({ date, today, settings, onOpenBackup, onOpenCatalog, onBa
   const db = getDb();
   const [open, setOpen] = useState<Open>(null);
   const [why, setWhy] = useState<{ id: string; ts: number } | null>(null);
+  const [line, setLine] = useState(false);
 
   const day = useLive(() => getDay(db, date), [date]);
   const events = useLive(() => listEventsByDate(db, date), [date]);
@@ -246,6 +248,11 @@ export function Today({ date, today, settings, onOpenBackup, onOpenCatalog, onBa
       )}
 
       <h2 class="section-title">Добавить запись</h2>
+      <button type="button" class="ql-open" onClick={() => setLine(true)}>
+        <Icon name="note" size={20} />
+        <span class="grow">Написать или надиктовать одной строкой</span>
+        <span class="muted small">кофе, овсянка…</span>
+      </button>
       <div class="quick-row">
         {QUICK.map((q) => (
           <button type="button" key={q.label} class="quick" onClick={() => setOpen({ type: 'add', kind: q.kind })}>
@@ -357,6 +364,14 @@ export function Today({ date, today, settings, onOpenBackup, onOpenCatalog, onBa
       {open?.type === 'evening' && <EveningCheckin date={open.date} onClose={close} />}
       {open?.type === 'note' && <NoteSheet date={open.date} onClose={close} />}
       {open?.type === 'stool' && <StoolSheet date={open.date} onClose={close} />}
+      {line && (
+        <QuickLine
+          date={date}
+          dayStartsAt={settings.dayStartsAt}
+          defaultTs={() => (isToday ? Date.now() : tsFromDiaryDate(date, '12:00', settings.dayStartsAt))}
+          onClose={() => setLine(false)}
+        />
+      )}
       {why && <WhyPanel symptomId={why.id} focusTs={why.ts} onClose={() => setWhy(null)} />}
     </div>
   );

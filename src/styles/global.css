@@ -759,3 +759,18 @@ a.btn { text-decoration: none; }
 .why-notable { color: var(--k-food); }
 .why-weak { color: var(--muted); }
 .why .stack h3 { margin: 6px 2px 0; }
+
+/* Запись одной строкой */
+.ql-open {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 50px;
+  padding: 10px 14px; border: none; border-radius: var(--r-group);
+  background: var(--surface); color: var(--accent); font-weight: 600; text-align: left; cursor: pointer;
+}
+.ql-row { cursor: default; align-items: flex-start; }
+.ql-skip { opacity: 0.45; }
+.ql-skip .row-title { text-decoration: line-through; }
+.ql-kinds { margin-top: 8px; gap: 6px; }
+.ql-kinds .chip { min-height: 34px; padding: 4px 10px; font-size: 0.9rem; }
+.exp-list { background: var(--bg); }
+.exp-list .row-btn { background: var(--bg); }
+.exp-row { cursor: default; }

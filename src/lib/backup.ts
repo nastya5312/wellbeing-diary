@@ -187,6 +187,11 @@ export function validateBackup(raw: unknown): Result {
   if (s.dayStartsAt !== undefined && !(isStr(s.dayStartsAt) && isTimeString(s.dayStartsAt))) return fail('неверная граница дня');
   if (s.hiddenInsights !== undefined && !(Array.isArray(s.hiddenInsights) && s.hiddenInsights.every(isStr))) return fail('неверный список скрытых выводов');
   if (s.insightNotes !== undefined && !(isObj(s.insightNotes) && Object.values(s.insightNotes).every(isStr))) return fail('неверные заметки к выводам');
+  if (
+    s.experiments !== undefined &&
+    !(Array.isArray(s.experiments) &&
+      s.experiments.every((e) => isObj(e) && isStr(e.id) && isStr(e.name) && isStr(e.start) && isDateString(e.start) && isStr(e.end) && isDateString(e.end) && e.end >= e.start && optStr(e.note) && isNum(e.createdAt)))
+  ) return fail('неверные эксперименты');
   return {
     ok: true,
     data: {
@@ -243,8 +248,14 @@ export async function importBackup(db: DiaryDB, data: BackupFile, mode: ImportMo
     await db.metrics.bulkAdd(metrics);
     await db.measurements.bulkAdd(measurements);
     const current = await db.settings.get('app');
-    if (current && (current.lastExportAt ?? 0) < data.exportedAt) {
-      await db.settings.put({ ...current, lastExportAt: data.exportedAt });
+    if (current) {
+      // Эксперименты из файла, которых ещё нет
+      const have = new Set((current.experiments ?? []).map((e) => e.id));
+      const extra = (data.settings.experiments ?? []).filter((e) => !have.has(e.id));
+      const next = { ...current };
+      if (extra.length) next.experiments = [...(current.experiments ?? []), ...extra];
+      if ((current.lastExportAt ?? 0) < data.exportedAt) next.lastExportAt = data.exportedAt;
+      if (extra.length || next.lastExportAt !== current.lastExportAt) await db.settings.put(next);
     }
     return { items: items.length, days: days.length, events: events.length, courses: courses.length, measurements: measurements.length };
   });

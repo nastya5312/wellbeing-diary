@@ -8,7 +8,7 @@
 
 Адрес: https://nastya5312.github.io/wellbeing-diary/
 
-Версия 1.3.0. Проверка на телефоне — в [CHECKLIST_iPhone.md](CHECKLIST_iPhone.md).
+Версия 1.4.0. Проверка на телефоне — в [CHECKLIST_iPhone.md](CHECKLIST_iPhone.md).
 
 ## Как поставить на iPhone
 

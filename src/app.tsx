@@ -61,7 +61,7 @@ export function App() {
         {settings && today && tab === 'calendar' && (
           <CalendarTab today={today} settings={settings} onOpenCatalog={() => openMore('catalog')} />
         )}
-        {tab === 'insights' && <Insights onOpenReport={() => openMore('report')} />}
+        {tab === 'insights' && <Insights today={today ?? undefined} onOpenReport={() => openMore('report')} />}
         {settings && today && tab === 'more' && <More page={morePage} setPage={setMorePage} today={today} settings={settings} />}
       </main>
       <TabBar

@@ -20,7 +20,7 @@ export async function loadInput(db: DiaryDB): Promise<AnalysisInput> {
     db.measurements.toArray(),
   ]);
   // Скрытые выводы и заметки не влияют на расчёт — убираем их из ключа кэша
-  const { hiddenInsights: _h, insightNotes: _n, lastExportAt: _l, ...calcSettings } = settings;
+  const { hiddenInsights: _h, insightNotes: _n, lastExportAt: _l, experiments: _x, ...calcSettings } = settings;
   // «daily» и заметки показателей на расчёт не влияют
   const calcMetrics = metrics.map(({ daily: _d, ...m }) => m);
   const calcMeasurements = measurements.map(({ note: _n, ts: _t, ...m }) => m);
