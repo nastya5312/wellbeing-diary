@@ -35,7 +35,9 @@ export function App() {
   return (
     <div class="app">
       <main class="app-main">
-        {settings && today && tab === 'today' && <Today today={today} settings={settings} onOpenBackup={() => (setMorePage('backup'), setTab('more'))} />}
+        {settings && today && tab === 'today' && <Today today={today} settings={settings} onOpenBackup={() => (setMorePage('backup'), setTab('more'))}
+            onOpenCatalog={() => (setMorePage('catalog'), setTab('more'))}
+          />}
         {tab === 'calendar' && <Placeholder title="Календарь" text="Календарь и графики появятся на этапе 4." />}
         {tab === 'insights' && <Placeholder title="Анализ" text="Анализ появится на этапах 5–7." />}
         {tab === 'more' && <More page={morePage} setPage={setMorePage} />}

@@ -7,6 +7,7 @@ import { ItemForm, type ItemDraft } from '../components/ItemForm';
 import { useLive } from '../lib/useLive';
 import { safe, notify } from '../lib/notify';
 import { KIND_PLURAL } from '../lib/labels';
+import { PasteList } from './PasteList';
 
 // Справочник: позиции по типам, переименование, теги, избранное, архив, объединение дублей.
 export function Catalog({ onBack }: { onBack: () => void }) {
@@ -15,6 +16,7 @@ export function Catalog({ onBack }: { onBack: () => void }) {
   const [showArchived, setShowArchived] = useState(false);
   const [editing, setEditing] = useState<Item | null>(null);
   const [creating, setCreating] = useState(false);
+  const [pasting, setPasting] = useState(false);
 
   const items = useLive(() => listItems(db, { kind, includeArchived: true }), [kind]);
   const counts = useLive(
@@ -53,9 +55,14 @@ export function Catalog({ onBack }: { onBack: () => void }) {
         ))}
       </div>
 
-      <button type="button" class="btn btn-block" onClick={() => setCreating(true)}>
-        + Добавить
-      </button>
+      <div class="row">
+        <button type="button" class="btn grow" onClick={() => setCreating(true)}>
+          + Добавить
+        </button>
+        <button type="button" class="btn grow" onClick={() => setPasting(true)}>
+          Вставить список
+        </button>
+      </div>
 
       <ul class="list">
         {active.map((it) => (
@@ -81,6 +88,7 @@ export function Catalog({ onBack }: { onBack: () => void }) {
 
       {editing && <ItemEditor item={editing} onClose={() => setEditing(null)} />}
       {creating && <ItemCreator kind={kind} onClose={() => setCreating(false)} />}
+      {pasting && <PasteList onClose={() => setPasting(false)} />}
     </div>
   );
 }

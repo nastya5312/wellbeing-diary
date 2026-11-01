@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'preact/hooks';
 import { storageErrorMessage } from './storage';
 
-export type Notice = { id: number; text: string; kind: 'error' | 'info' };
+export type NoticeAction = { label: string; run: () => void };
+export type Notice = { id: number; text: string; kind: 'error' | 'info'; action?: NoticeAction };
 
 let notices: Notice[] = [];
 let nextId = 1;
@@ -12,12 +13,12 @@ function emit() {
   for (const l of listeners) l(notices);
 }
 
-export function notify(text: string, kind: Notice['kind'] = 'info') {
-  const n = { id: nextId++, text, kind };
+export function notify(text: string, kind: Notice['kind'] = 'info', action?: NoticeAction) {
+  const n: Notice = { id: nextId++, text, kind, action };
   // Информационное сообщение одно за раз (новое заменяет старое), ошибки не теряются
   notices = [...notices.filter((x) => x.kind === 'error'), n];
   emit();
-  setTimeout(() => dismiss(n.id), kind === 'error' ? 8000 : 1800);
+  setTimeout(() => dismiss(n.id), kind === 'error' ? 8000 : action ? 4000 : 1800);
 }
 
 export function dismiss(id: number) {

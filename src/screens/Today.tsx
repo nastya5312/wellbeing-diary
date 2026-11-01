@@ -7,6 +7,7 @@ import { SleepCheckin } from './SleepCheckin';
 import { EveningCheckin } from './EveningCheckin';
 import { NoteSheet } from './NoteSheet';
 import { SwipeRow } from '../components/SwipeRow';
+import { Checklist } from '../components/Checklist';
 import { useLive } from '../lib/useLive';
 import { safe, notify } from '../lib/notify';
 import { cycleDay } from '../lib/cycle';
@@ -29,7 +30,12 @@ const ADD_TILES: { kind: ItemKind; label: string }[] = [
   { kind: 'symptom', label: 'Симптом' },
 ];
 
-export function Today({ today, settings, onOpenBackup }: { today: string; settings: Settings; onOpenBackup: () => void }) {
+export function Today({ today, settings, onOpenBackup, onOpenCatalog }: {
+  today: string;
+  settings: Settings;
+  onOpenBackup: () => void;
+  onOpenCatalog: () => void;
+}) {
   const db = getDb();
   const [open, setOpen] = useState<Open>(null);
 
@@ -76,6 +82,11 @@ export function Today({ today, settings, onOpenBackup }: { today: string; settin
         </button>
       )}
 
+      {items && events && (
+        <Checklist today={today} items={[...items.values()]} events={events} onEmptyHint={onOpenCatalog} />
+      )}
+
+      <h2 class="section-title">Добавить</h2>
       <div class="tiles">
         <button type="button" class="tile" onClick={() => setOpen({ type: 'sleep', date: today })}>
           <span class="tile-icon" aria-hidden="true">🌙</span>

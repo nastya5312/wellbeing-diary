@@ -4,7 +4,7 @@ import type { DiaryDB } from './schema';
 import type { Day, DiaryEvent, Item, ItemKind, Settings } from '../models/types';
 import { DEFAULT_SETTINGS } from './defaults';
 import { addDays, diaryDate, isDateString, isTimeString } from '../lib/dates';
-import { isSimilarName } from '../lib/similar';
+import { isSimilarName, normalizeName } from '../lib/similar';
 
 // ---------- Настройки ----------
 
@@ -238,4 +238,50 @@ export async function listEventsRange(db: DiaryDB, from: string, to: string): Pr
 /** Есть ли хоть какие-то записи (для напоминания о копии). */
 export async function hasAnyData(db: DiaryDB): Promise<boolean> {
   return (await db.events.count()) > 0 || (await db.days.count()) > 0;
+}
+
+/**
+ * Добавить позиции из вставленного списка. Если такая позиция уже есть (то же название и тип),
+ * новая не создаётся: теги дописываются, при favorite — позиция становится избранной и возвращается из архива.
+ */
+export async function importListEntries(
+  db: DiaryDB,
+  entries: { kind: ItemKind; name: string; tags: string[] }[],
+  favorite: boolean,
+): Promise<{ added: number; updated: number }> {
+  return db.transaction('rw', db.items, async () => {
+    const all = await db.items.toArray();
+    const byKey = new Map(all.map((it) => [`${it.kind}:${normalizeName(it.name)}`, it]));
+    let added = 0;
+    let updated = 0;
+    const now = Date.now();
+    for (const [i, e] of entries.entries()) {
+      const name = e.name.trim();
+      if (!name) continue;
+      const key = `${e.kind}:${normalizeName(name)}`;
+      const existing = byKey.get(key);
+      if (existing) {
+        await db.items.update(existing.id, {
+          tags: normalizeTags([...existing.tags, ...e.tags]),
+          ...(favorite && { favorite: true, archived: false }),
+        });
+        updated++;
+      } else {
+        const item: Item = {
+          id: crypto.randomUUID(),
+          kind: e.kind,
+          name,
+          tags: normalizeTags(e.tags),
+          favorite,
+          archived: false,
+          useCount: 0,
+          createdAt: now + i, // порядок как в списке
+        };
+        await db.items.add(item);
+        byKey.set(key, item);
+        added++;
+      }
+    }
+    return { added, updated };
+  });
 }
