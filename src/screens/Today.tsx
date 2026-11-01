@@ -6,6 +6,8 @@ import { QuickAdd } from './QuickAdd';
 import { SleepCheckin } from './SleepCheckin';
 import { EveningCheckin } from './EveningCheckin';
 import { NoteSheet } from './NoteSheet';
+import { StoolSheet } from './StoolSheet';
+import { medIntervals } from '../lib/intervals';
 import { SwipeRow } from '../components/SwipeRow';
 import { Checklist } from '../components/Checklist';
 import { DailyMetrics } from '../components/DailyMetrics';
@@ -15,12 +17,12 @@ import { cycleDay } from '../lib/cycle';
 import { backupOverdue } from '../lib/backup';
 import { BACKUP_REMIND_DAYS } from '../db/defaults';
 import { addDays, formatDateLong, formatDuration, localTime, tsFromDiaryDate, weekdayRu } from '../lib/dates';
-import { ENERGY_LABELS, INTENSITY_LABELS, KIND_ICON, MOOD_LABELS, QUALITY_LABELS, STRESS_LABELS } from '../lib/labels';
+import { BRISTOL_LABELS, ENERGY_LABELS, INTENSITY_LABELS, KIND_ICON, MOOD_LABELS, QUALITY_LABELS, STRESS_LABELS } from '../lib/labels';
 
 type Open =
   | { type: 'add'; kind?: ItemKind }
   | { type: 'edit'; event: DiaryEvent; item: Item }
-  | { type: 'sleep' | 'evening' | 'note'; date: string }
+  | { type: 'sleep' | 'evening' | 'note' | 'stool'; date: string }
   | null;
 
 const ADD_TILES: { kind: ItemKind; label: string }[] = [
@@ -62,6 +64,7 @@ export function Today({ date, today, settings, onOpenBackup, onOpenCatalog, onBa
     if (ok) notify(completed ? 'День отмечен заполненным' : 'Отметка снята');
   };
 
+  const intervals = events && items ? medIntervals(events, items) : [];
   const sleep = day?.sleep;
   const wb = day?.wellbeing;
 
@@ -106,7 +109,8 @@ export function Today({ date, today, settings, onOpenBackup, onOpenCatalog, onBa
         <Checklist
           date={date}
           tsFor={() => (isToday ? Date.now() : tsFromDiaryDate(date, '12:00', settings.dayStartsAt))}
-          items={[...items.values()]} events={events} courses={courses} onEmptyHint={onOpenCatalog} />
+          items={[...items.values()]} events={events} courses={courses} onEmptyHint={onOpenCatalog}
+          dayStartsAt={settings.dayStartsAt} />
       )}
 
       <DailyMetrics date={date} />
@@ -127,6 +131,10 @@ export function Today({ date, today, settings, onOpenBackup, onOpenCatalog, onBa
             <span>{t.label}</span>
           </button>
         ))}
+        <button type="button" class="tile" onClick={() => setOpen({ type: 'stool', date: date })}>
+          <span class="tile-icon" aria-hidden="true">🧻</span>
+          <span>Стул</span>
+        </button>
         <button type="button" class="tile" onClick={() => setOpen({ type: 'note', date: date })}>
           <span class="tile-icon" aria-hidden="true">✎</span>
           <span>Заметка</span>
@@ -136,7 +144,7 @@ export function Today({ date, today, settings, onOpenBackup, onOpenCatalog, onBa
         + Другое событие (активность и прочее)
       </button>
 
-      {(sleep || wb || day?.flow || day?.note) && (
+      {(sleep || wb || day?.flow || day?.note || day?.stool || intervals.length > 0) && (
         <section class="cards">
           {sleep && (
             <button type="button" class="card" onClick={() => setOpen({ type: 'sleep', date: date })}>
@@ -165,6 +173,27 @@ export function Today({ date, today, settings, onOpenBackup, onOpenCatalog, onBa
                   .join(' · ')}
               </span>
             </button>
+          )}
+          {day?.stool && (
+            <button type="button" class="card" onClick={() => setOpen({ type: 'stool', date: date })}>
+              <span class="card-title">🧻 Стул</span>
+              <span class="small">
+                {day.stool.count === 0 ? 'не было' : `${day.stool.count >= 5 ? '5+' : day.stool.count} раз`}
+                {day.stool.type ? ` · тип ${day.stool.type}: ${BRISTOL_LABELS[day.stool.type - 1]}` : ''}
+              </span>
+            </button>
+          )}
+          {intervals.length > 0 && (
+            <div class="card">
+              <span class="card-title">⏱ Интервалы после лекарств</span>
+              {intervals.map((iv) => (
+                <span key={iv.eventId} class="small">
+                  {iv.medName} {iv.medTime} →{' '}
+                  {iv.next ? `${iv.next.name} ${iv.next.time} (через ${formatDuration(iv.next.minutes)})` : 'дальше еды и напитков в этот день нет'}
+                </span>
+              ))}
+              <span class="muted small">Первая еда или напиток (кроме воды) после приёма. Время меняется касанием записи ниже.</span>
+            </div>
           )}
           {day?.note && (
             <button type="button" class="card" onClick={() => setOpen({ type: 'note', date: date })}>
@@ -226,6 +255,7 @@ export function Today({ date, today, settings, onOpenBackup, onOpenCatalog, onBa
       {open?.type === 'sleep' && <SleepCheckin date={open.date} onClose={close} />}
       {open?.type === 'evening' && <EveningCheckin date={open.date} onClose={close} />}
       {open?.type === 'note' && <NoteSheet date={open.date} onClose={close} />}
+      {open?.type === 'stool' && <StoolSheet date={open.date} onClose={close} />}
     </div>
   );
 }

@@ -15,7 +15,7 @@ import { formatDateRu } from '../lib/dates';
 
 const fmtQ = (q: number) => (q < 0.001 ? 'q < 0,001' : `q = ${q.toFixed(3).replace('.', ',')}`);
 
-export function Insights() {
+export function Insights({ onOpenReport }: { onOpenReport?: () => void }) {
   const db = getDb();
   const settings = useLive(() => getSettings(db), []);
   const timeline = useLive(() => loadTimeline(db), []);
@@ -58,6 +58,11 @@ export function Insights() {
         </button>
       </header>
       <p class="disclaimer">{DISCLAIMER}</p>
+      {onOpenReport && (
+        <button type="button" class="btn btn-block" onClick={onOpenReport}>
+          Отчёт для врача (A4)
+        </button>
+      )}
 
       {!result && busy && <p class="muted">Считаю…</p>}
 
@@ -86,7 +91,19 @@ export function Insights() {
           </p>
 
           <section>
+            {result.completedDays < 90 && (
+              <div class="progress progress-thin" role="progressbar" aria-label="До надёжных выводов" aria-valuemin={0} aria-valuemax={90} aria-valuenow={result.completedDays}>
+                <div style={{ width: `${(result.completedDays / 90) * 100}%` }} />
+              </div>
+            )}
+            {result.completedDays < 90 && (
+              <p class="muted small">До более надёжных выводов (90 заполненных дней): ещё {90 - result.completedDays}. Пока данных мало — выводы могут меняться.</p>
+            )}
             <h2 class="section-title">Совпадения</h2>
+            <p class="muted small">
+              Сильный и заметный сигнал — разница большая и повторилась в обеих половинах периода. Слабый — данных мало, связь
+              неустойчива или совпадает с другим фактором. Всё это гипотезы.
+            </p>
             {visibleSignals.length === 0 && (
               <p class="muted">Устойчивых совпадений пока не найдено. Это нормальный результат — значит, случайных выводов приложение не показывает.</p>
             )}

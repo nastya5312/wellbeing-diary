@@ -6,12 +6,13 @@ import { addDays, daysBetween } from '../lib/dates';
 import { dateRange } from '../lib/trends';
 import { cycleStarts } from '../lib/cycle';
 import { courseStatus } from '../db/courses';
-import { MAX_CYCLE_LOOKAHEAD, PREMENSTRUAL_DAYS } from './thresholds';
+import { GAP_FOOD_MIN, GAP_SUPPLEMENT_MIN, MAX_CYCLE_LOOKAHEAD, PREMENSTRUAL_DAYS } from './thresholds';
+import { firstAfter } from '../lib/intervals';
 
 export type Value = boolean | undefined;
 
-export type FactorFamily = 'item' | 'tag' | 'sleep' | 'cycle' | 'course';
-export type OutcomeFamily = 'symptom' | 'sleep' | 'mood';
+export type FactorFamily = 'item' | 'tag' | 'sleep' | 'cycle' | 'course' | 'gap';
+export type OutcomeFamily = 'symptom' | 'sleep' | 'mood' | 'stool';
 
 export type BinaryVar = {
   id: string;
@@ -126,6 +127,24 @@ export function buildTimeline(input: AnalysisInput): Timeline {
     factors.push({ id: `course:${itemId}`, label: `период приёма «${it.name}»`, family: 'course', members: [itemId], values: onCompleted((i) => courseStatus(list, dates[i]!) === 'active') });
   }
 
+  // --- Интервалы после лекарства (только дни, когда лекарство было; сравниваются короткий и длинный интервал) ---
+  const medIds = new Set(events.filter((e) => e.kind === 'med').map((e) => e.itemId));
+  for (const medId of medIds) {
+    const it = itemBy.get(medId);
+    if (!it) continue;
+    const gapVals = (what: 'food' | 'supplement', limit: number): Value[] =>
+      dates.map((_, i) => {
+        if (!completed[i]) return undefined;
+        const dayEv = eventsByDay[i]!;
+        const first = dayEv.filter((e) => e.itemId === medId).sort((a, b) => a.ts - b.ts)[0];
+        if (!first) return undefined;
+        const next = firstAfter(first.ts, dayEv, itemBy, what);
+        return next !== undefined && next.ts - first.ts < limit * 60000;
+      });
+    factors.push({ id: `gap:food:${medId}`, label: `еда или напиток раньше чем через ${GAP_FOOD_MIN} мин после «${it.name}»`, family: 'gap', members: [medId], values: gapVals('food', GAP_FOOD_MIN) });
+    factors.push({ id: `gap:sup:${medId}`, label: `добавка раньше чем через ${GAP_SUPPLEMENT_MIN / 60} ч после «${it.name}»`, family: 'gap', members: [medId], values: gapVals('supplement', GAP_SUPPLEMENT_MIN) });
+  }
+
   // --- Результаты ---
   const threshold = settings.symptomMinIntensity;
   const symptomIds = new Set(events.filter((e) => e.kind === 'symptom').map((e) => e.itemId));
@@ -155,6 +174,14 @@ export function buildTimeline(input: AnalysisInput): Timeline {
       const v = dayBy.get(d)?.wellbeing?.[key];
       return completed[i] && v !== undefined ? test(v) : undefined;
     });
+  const stoolVal = (fn: (st: NonNullable<Day['stool']>) => boolean | undefined): Value[] =>
+    dates.map((d, i) => {
+      const st = dayBy.get(d)?.stool;
+      return completed[i] && st ? fn(st) : undefined;
+    });
+  outcomes.push({ id: 'stool:none', label: 'стула не было', family: 'stool', values: stoolVal((st) => st.count === 0) });
+  outcomes.push({ id: 'stool:hard', label: 'твёрдый стул (тип 1–2)', family: 'stool', values: stoolVal((st) => (st.count === 0 ? false : st.type === undefined ? undefined : st.type <= 2)) });
+  outcomes.push({ id: 'stool:loose', label: 'жидкий стул (тип 6–7)', family: 'stool', values: stoolVal((st) => (st.count === 0 ? false : st.type === undefined ? undefined : st.type >= 6)) });
   outcomes.push({ id: 'mood:low', label: 'плохое настроение (1–2)', family: 'mood', values: wb('mood', (v) => v <= 2) });
   outcomes.push({ id: 'energy:low', label: 'мало энергии (1–2)', family: 'mood', values: wb('energy', (v) => v <= 2) });
   outcomes.push({ id: 'stress:high', label: 'сильный стресс (4–5)', family: 'mood', values: wb('stress', (v) => v >= 4) });
@@ -167,6 +194,7 @@ export function buildTimeline(input: AnalysisInput): Timeline {
     { id: 'n:mood', label: 'настроение', family: 'mood', values: num((d) => d.wellbeing?.mood) },
     { id: 'n:energy', label: 'энергия', family: 'mood', values: num((d) => d.wellbeing?.energy) },
     { id: 'n:stress', label: 'стресс', family: 'mood', values: num((d) => d.wellbeing?.stress) },
+    { id: 'n:bristol', label: 'тип стула по Бристольской шкале', family: 'stool', values: num((d) => (d.stool && d.stool.count > 0 ? d.stool.type : undefined)) },
   ];
   for (const id of symptomIds) {
     const it = itemBy.get(id);

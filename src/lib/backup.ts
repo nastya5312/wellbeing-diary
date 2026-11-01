@@ -86,6 +86,10 @@ function checkDay(x: unknown): string | null {
     const w = x.wellbeing;
     if (!isObj(w) || !optScale(w.mood) || !optScale(w.energy) || !optScale(w.stress)) return `неверное самочувствие ${x.date}`;
   }
+  if (x.stool !== undefined) {
+    const st = x.stool;
+    if (!isObj(st) || !isNum(st.count) || st.count < 0 || !Number.isInteger(st.count) || !optScale(st.type, 1, 7)) return `неверный стул ${x.date}`;
+  }
   if (!optScale(x.flow, 0, 3) || !optStr(x.note)) return `неверные поля дня ${x.date}`;
   return null;
 }

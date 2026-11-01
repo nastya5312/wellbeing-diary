@@ -13,6 +13,9 @@ export type Sleep = {
   note?: string;
 };
 
+/** Стул за день: сколько раз и типичный тип по Бристольской шкале (1–7). count 0 — не было. */
+export type Stool = { count: number; type?: 1 | 2 | 3 | 4 | 5 | 6 | 7 };
+
 export type Wellbeing = { mood?: Scale5; energy?: Scale5; stress?: Scale5 };
 
 export type Day = {
@@ -21,6 +24,7 @@ export type Day = {
   sleep?: Sleep; // сон относится к дате пробуждения
   wellbeing?: Wellbeing;
   flow?: Flow;
+  stool?: Stool;
   note?: string;
   updatedAt: number;
 };

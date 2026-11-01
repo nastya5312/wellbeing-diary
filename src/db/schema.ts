@@ -70,8 +70,25 @@ export class DiaryDB extends Dexie {
 
 let instance: DiaryDB | null = null;
 
-/** Общая база приложения. */
+/** Демо-режим: отдельная база с вымышленными данными. Настоящая база в нём не открывается и не меняется. */
+export const DEMO_DB_NAME = 'wellbeing-diary-demo';
+const DEMO_FLAG = 'demo-mode';
+
+export function isDemo(): boolean {
+  try {
+    return localStorage.getItem(DEMO_FLAG) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function setDemoFlag(on: boolean): void {
+  if (on) localStorage.setItem(DEMO_FLAG, '1');
+  else localStorage.removeItem(DEMO_FLAG);
+}
+
+/** Общая база приложения (в демо-режиме — демо-база). */
 export function getDb(): DiaryDB {
-  instance ??= new DiaryDB();
+  instance ??= new DiaryDB(isDemo() ? DEMO_DB_NAME : DB_NAME);
   return instance;
 }

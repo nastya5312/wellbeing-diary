@@ -54,3 +54,7 @@ export const PHI_CONFOUND = 0.5;
 export const MIN_STRATUM_F_DAYS = 3;
 /** Сколько совпадающих факторов показывать у одного вывода */
 export const MAX_CONFOUNDS = 3;
+
+/** Окна интервалов после лекарства — только для сравнения дней, не рекомендация */
+export const GAP_FOOD_MIN = 60;
+export const GAP_SUPPLEMENT_MIN = 240;

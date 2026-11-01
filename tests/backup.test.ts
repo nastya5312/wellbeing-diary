@@ -27,7 +27,7 @@ async function fill() {
   await addEvent(db, { itemId: med.id, ts: at('2026-11-01T09:00:00'), amountText: '1 шт.' });
   await addEvent(db, { itemId: sym!.id, ts: at('2026-11-02T02:00:00'), intensity: 4 });
   await saveDay(db, '2026-11-01', {
-    completed: true, flow: 2, note: 'день',
+    completed: true, flow: 2, note: 'день', stool: { count: 2, type: 4 },
     sleep: { bedtime: '23:30', wake: '07:15', durationMin: 465, quality: 4, awakenings: 1 },
     wellbeing: { mood: 3, energy: 2, stress: 4 },
   });
@@ -122,6 +122,18 @@ describe('резервная копия', () => {
     await expect(importBackup(db, broken, 'replace')).rejects.toThrow();
     expect(await db.events.count()).toBe(backup.events.length);
     expect(await db.items.count()).toBe(backup.items.length);
+  });
+});
+
+describe('проверка стула в копии', () => {
+  it('неверный тип или число отклоняются', async () => {
+    await fill();
+    const b = await createBackup(db);
+    for (const stool of [{ count: 1, type: 8 }, { count: -1 }, { count: 1.5 }, { type: 3 }]) {
+      const bad = JSON.parse(JSON.stringify(b));
+      bad.days[0].stool = stool;
+      expect(validateBackup(bad).ok).toBe(false);
+    }
   });
 });
 

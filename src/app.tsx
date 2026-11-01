@@ -6,7 +6,8 @@ import { Today } from './screens/Today';
 import { CalendarTab } from './screens/Calendar';
 import { More, type MorePage } from './screens/More';
 import { Insights } from './screens/Insights';
-import { getDb } from './db/schema';
+import { getDb, isDemo } from './db/schema';
+import { exitDemo } from './lib/demo';
 import { getSettings } from './db/repo';
 import { diaryDate } from './lib/dates';
 import { useLive } from './lib/useLive';
@@ -39,6 +40,14 @@ export function App() {
 
   return (
     <div class="app">
+      {isDemo() && (
+        <div class="demo-bar no-print" role="status">
+          <b>ДЕМО</b> · вымышленные данные, твои записи не видны и не меняются
+          <button type="button" class="btn btn-small" onClick={() => void exitDemo()}>
+            Удалить демо
+          </button>
+        </div>
+      )}
       <main class="app-main">
         {settings && today && tab === 'today' && (
           <Today
@@ -52,8 +61,8 @@ export function App() {
         {settings && today && tab === 'calendar' && (
           <CalendarTab today={today} settings={settings} onOpenCatalog={() => openMore('catalog')} />
         )}
-        {tab === 'insights' && <Insights />}
-        {tab === 'more' && <More page={morePage} setPage={setMorePage} />}
+        {tab === 'insights' && <Insights onOpenReport={() => openMore('report')} />}
+        {settings && today && tab === 'more' && <More page={morePage} setPage={setMorePage} today={today} settings={settings} />}
       </main>
       <TabBar
         tab={tab}

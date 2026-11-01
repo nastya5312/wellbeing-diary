@@ -4,6 +4,7 @@ import { getDb } from '../db/schema';
 import { addEvent, deleteEvent, updateEvent } from '../db/repo';
 import { courseStatus } from '../db/courses';
 import { safe, notify } from '../lib/notify';
+import { localTime, tsFromDiaryDate } from '../lib/dates';
 import { INTENSITY_LABELS, KIND_PLURAL } from '../lib/labels';
 import { Sheet } from './Sheet';
 import { ItemCreator } from '../screens/Catalog';
@@ -38,16 +39,19 @@ type Props = {
   events: DiaryEvent[];
   courses: Course[];
   onEmptyHint: () => void;
+  /** Граница дня (для правки времени) */
+  dayStartsAt: string;
 };
 
 // Чек-лист избранного.
 // Касание неотмеченной позиции — отметить (симптом: затем спросить силу). Касание отмеченной — снять.
 // «+1» у отмеченной — ещё одна запись (вторая чашка кофе). Всё отменяется кнопкой в уведомлении.
-export function Checklist({ date, tsFor, items, events, courses, onEmptyHint }: Props) {
+export function Checklist({ date, tsFor, items, events, courses, onEmptyHint, dayStartsAt }: Props) {
   const db = getDb();
   const [collapsed, setCollapsed] = useState(loadCollapsed);
   const [askIntensity, setAskIntensity] = useState<{ ev: DiaryEvent; name: string } | null>(null);
   const [creating, setCreating] = useState<ItemKind | null>(null);
+  const [timeFor, setTimeFor] = useState<{ ev: DiaryEvent; name: string } | null>(null);
 
   const toggleGroup = (kind: string) => {
     const next = new Set(collapsed);
@@ -69,6 +73,10 @@ export function Checklist({ date, tsFor, items, events, courses, onEmptyHint }: 
     if (!ev) return;
     if (it.kind === 'symptom') {
       setAskIntensity({ ev, name: it.name });
+      return;
+    }
+    if (ROUTINE.includes(it.kind)) {
+      notify(`Отмечено: ${it.name} в ${localTime(ev.ts)}`, 'info', { label: 'Другое время', run: () => setTimeFor({ ev, name: it.name }) });
       return;
     }
     notify(`Отмечено: ${it.name}`, 'info', { label: 'Отменить', run: () => void safe(() => deleteEvent(db, ev.id)) });
@@ -171,6 +179,19 @@ export function Checklist({ date, tsFor, items, events, courses, onEmptyHint }: 
                         </span>
                         {n > 1 && <span class="chip-count">×{n}</span>}
                       </button>
+                      {n > 0 && ROUTINE.includes(kind) && (
+                        <button
+                          type="button"
+                          class="chip-plus chip-time"
+                          aria-label={`Время: ${it.name}, ${list.map((e) => localTime(e.ts)).join(', ')}. Нажми, чтобы изменить`}
+                          onClick={() => {
+                            const last = list.reduce((a, b) => (b.ts > a.ts ? b : a));
+                            setTimeFor({ ev: last, name: it.name });
+                          }}
+                        >
+                          {localTime(list.reduce((a, b) => (b.ts > a.ts ? b : a)).ts)}
+                        </button>
+                      )}
                       {n > 0 && !ROUTINE.includes(kind) && (
                         <button type="button" class="chip-plus" aria-label={`Ещё раз: ${it.name}`} onClick={() => void add(it)}>
                           +1
@@ -225,7 +246,42 @@ export function Checklist({ date, tsFor, items, events, courses, onEmptyHint }: 
           </button>
         </Sheet>
       )}
+      {timeFor && (
+        <TimeSheet
+          name={timeFor.name}
+          initial={localTime(timeFor.ev.ts)}
+          onClose={() => setTimeFor(null)}
+          onSave={(time) => {
+            const ev = timeFor.ev;
+            void safe(async () => (await updateEvent(db, ev.id, { ts: tsFromDiaryDate(date, time, dayStartsAt) }), true)).then(
+              (ok) => ok && notify(`Время изменено: ${time}`),
+            );
+            setTimeFor(null);
+          }}
+        />
+      )}
       {creating && <ItemCreator kind={creating} defaultFavorite onClose={() => setCreating(null)} />}
     </section>
+  );
+}
+
+function TimeSheet({ name, initial, onClose, onSave }: { name: string; initial: string; onClose: () => void; onSave: (t: string) => void }) {
+  const [time, setTime] = useState(initial);
+  return (
+    <Sheet
+      title={`Время: ${name}`}
+      onClose={onClose}
+      footer={
+        <button type="button" class="btn btn-primary btn-block" onClick={() => onSave(time)}>
+          Сохранить
+        </button>
+      }
+    >
+      <label class="field">
+        <span>Во сколько</span>
+        <input type="time" value={time} required onInput={(e) => e.currentTarget.value && setTime(e.currentTarget.value)} />
+      </label>
+      <p class="muted small">Точное время нужно для интервалов между лекарством, едой и добавками.</p>
+    </Sheet>
   );
 }

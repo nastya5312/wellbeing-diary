@@ -18,6 +18,8 @@ export type Signal = Table2x2 & {
   factorId: string;
   factorLabel: string;
   factorFamily: string;
+  /** Позиции, из которых состоит фактор (для тега — его продукты) */
+  factorMembers?: string[];
   outcomeId: string;
   outcomeLabel: string;
   lag: number;
@@ -200,6 +202,7 @@ export function analyze(input: AnalysisInput): AnalysisResult {
       factorId: x.f.id,
       factorLabel: x.f.label,
       factorFamily: x.f.family,
+      ...(x.f.members && { factorMembers: x.f.members }),
       outcomeId: x.o.id,
       outcomeLabel: x.o.label,
       lag: x.lag,
