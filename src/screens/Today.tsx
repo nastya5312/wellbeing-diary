@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import type { DiaryEvent, Item, ItemKind, Settings } from '../models/types';
 import { getDb } from '../db/schema';
-import { deleteEvent, getDay, listEventsByDate, listFlowDates, saveDay, unfinishedYesterday } from '../db/repo';
+import { deleteEvent, getDay, hasAnyData, listEventsByDate, listFlowDates, saveDay, unfinishedYesterday } from '../db/repo';
 import { QuickAdd } from './QuickAdd';
 import { SleepCheckin } from './SleepCheckin';
 import { EveningCheckin } from './EveningCheckin';
@@ -10,6 +10,8 @@ import { SwipeRow } from '../components/SwipeRow';
 import { useLive } from '../lib/useLive';
 import { safe, notify } from '../lib/notify';
 import { cycleDay } from '../lib/cycle';
+import { backupOverdue } from '../lib/backup';
+import { BACKUP_REMIND_DAYS } from '../db/defaults';
 import { addDays, formatDateLong, formatDuration, localTime, weekdayRu } from '../lib/dates';
 import { ENERGY_LABELS, INTENSITY_LABELS, KIND_ICON, MOOD_LABELS, QUALITY_LABELS, STRESS_LABELS } from '../lib/labels';
 
@@ -27,7 +29,7 @@ const ADD_TILES: { kind: ItemKind; label: string }[] = [
   { kind: 'symptom', label: 'Симптом' },
 ];
 
-export function Today({ today, settings }: { today: string; settings: Settings }) {
+export function Today({ today, settings, onOpenBackup }: { today: string; settings: Settings; onOpenBackup: () => void }) {
   const db = getDb();
   const [open, setOpen] = useState<Open>(null);
 
@@ -36,6 +38,8 @@ export function Today({ today, settings }: { today: string; settings: Settings }
   const items = useLive(async () => new Map((await db.items.toArray()).map((it) => [it.id, it])), []);
   const cycle = useLive(async () => cycleDay(await listFlowDates(db, addDays(today, -90), today), today), [today]);
   const yesterday = useLive(() => unfinishedYesterday(db, today), [today]);
+  const hasData = useLive(() => hasAnyData(db), []);
+  const needBackup = hasData !== undefined && backupOverdue(settings.lastExportAt, hasData, BACKUP_REMIND_DAYS);
 
   const close = () => setOpen(null);
   const toggleCompleted = async () => {
@@ -56,6 +60,15 @@ export function Today({ today, settings }: { today: string; settings: Settings }
           {cycle ? ` · день цикла ${cycle}` : ''}
         </p>
       </header>
+
+      {needBackup && (
+        <button type="button" class="banner" onClick={onOpenBackup}>
+          {settings.lastExportAt === undefined
+            ? 'Резервной копии ещё нет. '
+            : `Последняя копия была больше ${BACKUP_REMIND_DAYS} дней назад. `}
+          <u>Сохранить копию</u>
+        </button>
+      )}
 
       {yesterday && (
         <button type="button" class="banner" onClick={() => setOpen({ type: 'evening', date: yesterday })}>

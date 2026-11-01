@@ -3,7 +3,7 @@ import { UpdateToast } from './components/UpdateToast';
 import { Notices } from './components/Notices';
 import { TabBar, type Tab } from './components/TabBar';
 import { Today } from './screens/Today';
-import { More } from './screens/More';
+import { More, type MorePage } from './screens/More';
 import { Placeholder } from './screens/Placeholder';
 import { getDb } from './db/schema';
 import { getSettings } from './db/repo';
@@ -13,6 +13,7 @@ import { requestPersistentStorage } from './lib/storage';
 
 export function App() {
   const [tab, setTab] = useState<Tab>('today');
+  const [morePage, setMorePage] = useState<MorePage>('menu');
   const settings = useLive(() => getSettings(getDb()), []);
   const [now, setNow] = useState(Date.now());
 
@@ -34,12 +35,18 @@ export function App() {
   return (
     <div class="app">
       <main class="app-main">
-        {settings && today && tab === 'today' && <Today today={today} settings={settings} />}
+        {settings && today && tab === 'today' && <Today today={today} settings={settings} onOpenBackup={() => (setMorePage('backup'), setTab('more'))} />}
         {tab === 'calendar' && <Placeholder title="Календарь" text="Календарь и графики появятся на этапе 4." />}
         {tab === 'insights' && <Placeholder title="Анализ" text="Анализ появится на этапах 5–7." />}
-        {tab === 'more' && <More />}
+        {tab === 'more' && <More page={morePage} setPage={setMorePage} />}
       </main>
-      <TabBar tab={tab} onChange={setTab} />
+      <TabBar
+        tab={tab}
+        onChange={(t) => {
+          if (t === 'more') setMorePage('menu');
+          setTab(t);
+        }}
+      />
       <Notices />
       <UpdateToast />
     </div>

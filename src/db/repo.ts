@@ -234,3 +234,8 @@ export async function unfinishedYesterday(db: DiaryDB, today: string): Promise<s
 export async function listEventsRange(db: DiaryDB, from: string, to: string): Promise<DiaryEvent[]> {
   return db.events.where('date').between(from, to, true, true).sortBy('ts');
 }
+
+/** Есть ли хоть какие-то записи (для напоминания о копии). */
+export async function hasAnyData(db: DiaryDB): Promise<boolean> {
+  return (await db.events.count()) > 0 || (await db.days.count()) > 0;
+}

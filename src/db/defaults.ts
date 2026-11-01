@@ -25,3 +25,6 @@ export const STARTER_ITEMS: { kind: ItemKind; name: string }[] = [
 export const FOOD_TAG_SUGGESTIONS = [
   'молочное', 'сахар', 'глютен', 'острое', 'жареное', 'алкоголь', 'кофе', 'шоколад', 'орехи', 'фастфуд',
 ];
+
+// Через сколько дней без резервной копии показывать напоминание
+export const BACKUP_REMIND_DAYS = 7;

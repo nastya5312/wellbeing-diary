@@ -319,3 +319,17 @@ textarea { resize: vertical; }
 @media (max-width: 360px) {
   .tiles { grid-template-columns: repeat(3, 1fr); }
 }
+
+/* ---------- Панели ---------- */
+.panel {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface);
+}
+.panel p, .panel ul, .panel ol { margin: 0; }
+.panel ul, .panel ol { padding-left: 1.2em; display: flex; flex-direction: column; gap: 6px; }
+.panel.warn { background: var(--warn-bg); color: var(--warn-text); border-color: transparent; }
+.file-btn { display: flex; align-items: center; justify-content: center; }
+.error {
+  padding: 10px 12px; border-radius: 12px;
+  border: 1px solid var(--danger); color: var(--danger);
+}
