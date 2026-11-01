@@ -3,6 +3,7 @@ import { getDb } from '../db/schema';
 import { getSettings, updateSettings } from '../db/repo';
 import { loadTimeline, runAnalysis, type UiResult } from '../analysis/run';
 import { RepeatsCard } from '../components/RepeatsCard';
+import { WhyPanel } from '../components/WhyPanel';
 import { Icon, IconBadge } from '../components/Icon';
 import type { Correlation, Signal } from '../analysis/analyze';
 import {
@@ -25,6 +26,14 @@ export function Insights({ onOpenReport }: { onOpenReport?: () => void }) {
   const [showDates, setShowDates] = useState<Signal | null>(null);
   const [noteFor, setNoteFor] = useState<string | null>(null);
   const [showHidden, setShowHidden] = useState(false);
+  const [whyId, setWhyId] = useState<string | null>(null);
+  // Симптомы, которые отмечались, — по частоте
+  const symptoms = useLive(async () => {
+    const [items, evs] = await Promise.all([db.items.where('kind').equals('symptom').toArray(), db.events.where('kind').equals('symptom').toArray()]);
+    const cnt = new Map<string, number>();
+    for (const e of evs) cnt.set(e.itemId, (cnt.get(e.itemId) ?? 0) + 1);
+    return items.filter((it) => cnt.has(it.id)).sort((a, b) => cnt.get(b.id)! - cnt.get(a.id)!).map((it) => ({ id: it.id, name: it.name, n: cnt.get(it.id)! }));
+  }, []);
 
   const run = async (force = false) => {
     setBusy(true);
@@ -71,6 +80,23 @@ export function Insights({ onOpenReport }: { onOpenReport?: () => void }) {
           </button>
         </div>
       )}
+
+      {symptoms && symptoms.length > 0 && (
+        <section class="why-card">
+          <span class="card-title">
+            <IconBadge name="symptom" tone="symptom" size={30} /> Почему так?
+          </span>
+          <span class="muted small">Выбери симптом — покажу, что раньше чаще всего было перед ним (по часам).</span>
+          <div class="chips">
+            {symptoms.map((s) => (
+              <button type="button" key={s.id} class="chip" onClick={() => setWhyId(s.id)}>
+                {s.name} <span class="muted">{s.n}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+      {whyId && <WhyPanel symptomId={whyId} onClose={() => setWhyId(null)} />}
 
       {!result && busy && <p class="muted">Считаю…</p>}
 

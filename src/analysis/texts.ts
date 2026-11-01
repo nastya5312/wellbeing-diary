@@ -90,3 +90,29 @@ export function repeatsLine(outcomeLabel: string, l: { lag: number; a: number; n
 
 /** Запрещённые слова — проверяются тестом во всех формулировках. */
 export const FORBIDDEN_WORDS = [/вызыва/i, /из-за/i, /причин[аы]/i, /вам нужно/i, /рекоменд/i, /принимать/i, /лечить/i];
+
+// ---------- «Почему так?» ----------
+const n1 = (x: number) => x.toFixed(1).replace('.', ',');
+
+export function whyTitle(c: { label: string; windowLabel: string }, symptom: string): string {
+  return `«${c.label}» ${c.windowLabel} «${symptom}»`;
+}
+
+export function whyDetails(c: { observed: number; cases: number; expected: number; ratio: number }): string {
+  const base = `Было перед ${c.observed} из ${c.cases} эпизодов.`;
+  if (c.ratio === Infinity) return `${base} В те же часы в другие дни не бывало ни разу.`;
+  return `${base} При обычном распорядке ожидалось бы около ${n1(c.expected)} — это в ${n1(c.ratio)} раза чаще.`;
+}
+
+export function whyBackgroundText(b: { label: string; withSymptom: number; episodeDays: number; other: number; otherDays: number }, symptom: string): string {
+  const pc = (a: number, n: number) => `${Math.round((a / n) * 100)}%`;
+  return `«${symptom}» чаще совпадает с днями «${b.label}»: ${b.withSymptom} из ${b.episodeDays} (${pc(b.withSymptom, b.episodeDays)}) против ${b.other} из ${b.otherDays} (${pc(b.other, b.otherDays)}) в остальные дни.`;
+}
+
+export function hoursAgoText(h: number): string {
+  if (h < 1) return 'меньше часа до';
+  if (h < 24) return `за ${Math.round(h)} ч до`;
+  const d = Math.floor(h / 24);
+  const rest = Math.round(h - d * 24);
+  return rest ? `за ${d} сут ${rest} ч до` : `за ${d} сут до`;
+}

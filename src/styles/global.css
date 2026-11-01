@@ -748,3 +748,14 @@ code { background: var(--surface-2); padding: 1px 5px; border-radius: 5px; }
 a.btn { text-decoration: none; }
 .usual-bar { display: flex; align-items: center; gap: 8px; }
 .usual-btn { flex: 1; min-height: 46px; border-radius: 14px; }
+
+/* «Почему так?» */
+.why-card { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: var(--r-group); background: var(--surface); }
+.why-card .chip { background: var(--bg); box-shadow: none; }
+.why-symptom { font-size: 1.5rem; margin: 2px 0 14px; }
+.why-row { cursor: default; }
+.why-tag { font-weight: 600; }
+.why-strong { color: var(--accent); }
+.why-notable { color: var(--k-food); }
+.why-weak { color: var(--muted); }
+.why .stack h3 { margin: 6px 2px 0; }

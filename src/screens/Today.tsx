@@ -11,6 +11,7 @@ import { medIntervals } from '../lib/intervals';
 import { SwipeRow } from '../components/SwipeRow';
 import { Checklist } from '../components/Checklist';
 import { DailyMetrics } from '../components/DailyMetrics';
+import { WhyPanel } from '../components/WhyPanel';
 import { Icon, IconBadge } from '../components/Icon';
 import { useLive } from '../lib/useLive';
 import { safe, notify } from '../lib/notify';
@@ -81,6 +82,7 @@ export function Today({ date, today, settings, onOpenBackup, onOpenCatalog, onBa
   const isToday = date === today;
   const db = getDb();
   const [open, setOpen] = useState<Open>(null);
+  const [why, setWhy] = useState<{ id: string; ts: number } | null>(null);
 
   const day = useLive(() => getDay(db, date), [date]);
   const events = useLive(() => listEventsByDate(db, date), [date]);
@@ -292,6 +294,28 @@ export function Today({ date, today, settings, onOpenBackup, onOpenCatalog, onBa
         </>
       )}
 
+      {(() => {
+        // Симптомы этого дня — для разбора «Почему так?» (последняя отметка каждого)
+        const sym = new Map<string, number>();
+        for (const e of events ?? []) if (e.kind === 'symptom') sym.set(e.itemId, Math.max(sym.get(e.itemId) ?? 0, e.ts));
+        if (!sym.size) return null;
+        return (
+          <section class="why-card">
+            <span class="card-title">
+              <IconBadge name="insights" tone="symptom" size={30} /> Почему так?
+            </span>
+            <span class="muted small">Что было перед симптомом и что раньше чаще всего ему предшествовало.</span>
+            <div class="chips">
+              {[...sym].map(([id, ts]) => (
+                <button type="button" key={id} class="chip" onClick={() => setWhy({ id, ts })}>
+                  {items?.get(id)?.name ?? 'симптом'}
+                </button>
+              ))}
+            </div>
+          </section>
+        );
+      })()}
+
       {intervals.length > 0 && (
         <div class="card">
           <span class="card-title">
@@ -333,6 +357,7 @@ export function Today({ date, today, settings, onOpenBackup, onOpenCatalog, onBa
       {open?.type === 'evening' && <EveningCheckin date={open.date} onClose={close} />}
       {open?.type === 'note' && <NoteSheet date={open.date} onClose={close} />}
       {open?.type === 'stool' && <StoolSheet date={open.date} onClose={close} />}
+      {why && <WhyPanel symptomId={why.id} focusTs={why.ts} onClose={() => setWhy(null)} />}
     </div>
   );
 }
