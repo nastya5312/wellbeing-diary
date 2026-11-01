@@ -30,6 +30,18 @@ export const FOOD_TAG_SUGGESTIONS = [
 export const BACKUP_REMIND_DAYS = 7;
 
 // Подсказки названий показателей (общие, без личных значений). Норму вводит пользовательница.
+/** Ежедневные измерения для экрана «Сегодня». Нормы не задаются: их вводит сама пользовательница. */
+export const DAILY_METRIC_SUGGESTIONS: { name: string; unit: string }[] = [
+  { name: 'Вес', unit: 'кг' },
+  { name: 'Пульс утром', unit: 'уд/мин' },
+  { name: 'Давление верхнее', unit: 'мм рт. ст.' },
+  { name: 'Давление нижнее', unit: 'мм рт. ст.' },
+  { name: 'Температура утром', unit: '°C' },
+  { name: 'Шаги', unit: 'шагов' },
+  { name: 'Вода', unit: 'стаканов' },
+  { name: 'Талия', unit: 'см' },
+];
+
 export const METRIC_SUGGESTIONS: { name: string; unit: string }[] = [
   { name: 'ТТГ', unit: 'мМЕ/л' },
   { name: 'Т4 свободный', unit: 'пмоль/л' },

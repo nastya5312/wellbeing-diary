@@ -82,6 +82,8 @@ export type Metric = {
   unit: string;
   refLow?: number;
   refHigh?: number;
+  /** Вводить каждый день на экране «Сегодня» (вес, пульс…) */
+  daily?: boolean;
   archived: boolean;
   createdAt: number;
 };

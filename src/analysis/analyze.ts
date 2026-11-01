@@ -5,6 +5,7 @@ import { fisherExact } from './fisher';
 import { benjaminiHochberg } from './fdr';
 import { correlationPValue, spearman } from './spearman';
 import { circularShiftPValue, hashString } from './permutation';
+import { findConfounds, type Confound } from './confound';
 import {
   MIN_COINCIDENCES, MIN_COMPLETED_DAYS, MIN_FACTOR_DAYS, MIN_PAIRS, NOTABLE, PERMUTATIONS, PERM_P_MAX, Q_MAX,
   RHO_MIN, RR_HIGH, RR_LOW, STRONG, REPLICATION_RR, REPLICATION_MIN_A,
@@ -33,6 +34,10 @@ export type Signal = Table2x2 & {
   replicated: boolean;
   /** Дни D, когда был фактор и результат в D + lag */
   dates: string[];
+  /** Факторы, которые часто бывают в те же дни (7.7) */
+  confounds: Confound[];
+  /** Категория снижена до «слабого»: влияние нельзя отделить от совпадающего фактора */
+  confounded: boolean;
 };
 
 export type Correlation = {
@@ -93,6 +98,12 @@ function replicates(f: (boolean | undefined)[], o: (boolean | undefined)[], lag:
     if (rr === null || t.a < (direction === 'more' ? REPLICATION_MIN_A : 0)) return false;
     return direction === 'more' ? rr >= REPLICATION_RR : rr <= 1 / REPLICATION_RR;
   });
+}
+
+/** Сохраняется ли разница после учёта совпадающего фактора (объединённое RR за порогом). */
+function strongEnough(mh: number | null, direction: 'more' | 'less'): boolean {
+  if (mh === null) return false;
+  return direction === 'more' ? mh >= RR_HIGH : mh <= RR_LOW;
 }
 
 function categorize(q: number, rr: number | null, a: number, direction: 'more' | 'less'): Category {
@@ -180,6 +191,8 @@ export function analyze(input: AnalysisInput): AnalysisResult {
     }
     const replicated = replicates(x.f.values, x.o.values, x.lag, direction, timeline.completed);
     const raw = categorize(q, rr, t.a, direction);
+    const confounds = findConfounds(x.f, x.o, x.lag, timeline.factors);
+    const confounded = confounds.some((c) => c.inseparable || (c.strata !== null && !strongEnough(c.strata.mh, direction)));
     signals.push({
       ...t,
       replicated,
@@ -198,8 +211,10 @@ export function analyze(input: AnalysisInput): AnalysisResult {
       q,
       pPerm,
       direction,
-      category: replicated ? raw : 'weak',
+      category: replicated && !confounded ? raw : 'weak',
       dates,
+      confounds,
+      confounded,
     });
   });
 
@@ -231,6 +246,8 @@ export function analyze(input: AnalysisInput): AnalysisResult {
         if (lag === 0 && xv.id > yv.id) continue;
         // Сон и сон в один день — один источник
         if (lag === 0 && xv.family === 'sleep' && yv.family === 'sleep') continue;
+        // Показатель с показателем (давление верхнее/нижнее и т. п.) — связаны измерением, не дневником
+        if (xv.family === 'metric' && yv.family === 'metric') continue;
         const { xs, ys } = pairsOf(xv.values, yv.values, lag);
         if (xs.length < MIN_PAIRS) continue;
         const rho = spearman(xs, ys);

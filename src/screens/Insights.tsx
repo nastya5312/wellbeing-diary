@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'preact/hooks';
 import { getDb } from '../db/schema';
 import { getSettings, updateSettings } from '../db/repo';
-import { runAnalysis, type UiResult } from '../analysis/run';
+import { loadTimeline, runAnalysis, type UiResult } from '../analysis/run';
+import { RepeatsCard } from '../components/RepeatsCard';
 import type { Correlation, Signal } from '../analysis/analyze';
 import {
-  CATEGORY_LABEL, DISCLAIMER, correlationDetails, correlationTitle, rrText, signalDetails, signalTitle,
+  CATEGORY_LABEL, DISCLAIMER, confoundTexts, correlationDetails, correlationTitle, rrText, signalDetails, signalTitle,
 } from '../analysis/texts';
 import { MIN_COMPLETED_DAYS } from '../analysis/thresholds';
 import { Sheet } from '../components/Sheet';
@@ -17,6 +18,7 @@ const fmtQ = (q: number) => (q < 0.001 ? 'q < 0,001' : `q = ${q.toFixed(3).repla
 export function Insights() {
   const db = getDb();
   const settings = useLive(() => getSettings(db), []);
+  const timeline = useLive(() => loadTimeline(db), []);
   const [result, setResult] = useState<UiResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [showDates, setShowDates] = useState<Signal | null>(null);
@@ -101,6 +103,15 @@ export function Insights() {
                     Отношение: {rrText(s.rr)} · {fmtQ(s.q)}
                     {!s.replicated && ' · в одной из половин периода не повторилось'}
                   </p>
+                  {s.confounds.length > 0 && (
+                    <div class="confound" role="note">
+                      <p class="small"><b>⚠ Совпадает с другим фактором</b></p>
+                      {confoundTexts(s).map((t, i) => (
+                        <p key={i} class="small">{t}</p>
+                      ))}
+                      {s.confounded && <p class="muted small">Поэтому вывод показан как слабый сигнал.</p>}
+                    </div>
+                  )}
                   {notes[s.id] && <p class="small note">Заметка: {notes[s.id]}</p>}
                   <div class="insight-actions">
                     <button type="button" class="btn btn-small" onClick={() => setShowDates(s)}>
@@ -166,6 +177,8 @@ export function Insights() {
         </>
       )}
 
+      {timeline && <RepeatsCard timeline={timeline} />}
+
       <details class="panel small">
         <summary>Как это считается</summary>
         <ul>
@@ -173,6 +186,7 @@ export function Insights() {
           <li>Точный критерий Фишера и поправка Бенджамини–Хохберга на число проверенных пар (q — ожидаемая доля ложных находок).</li>
           <li>Проверка перемешиванием: если совпадение объясняется тем, что хорошие и плохие дни идут сериями, вывод отсеивается.</li>
           <li>«Заметный» и «сильный» сигнал должен повторяться в обеих половинах периода.</li>
+          <li>Если фактор часто бывает в те же дни, что и другой (коэффициент phi ≥ 0,5), показывается предупреждение и пересчёт отдельно в днях с другим фактором и без него (объединённое отношение Мантеля–Хензеля). Если разделить нельзя, вывод остаётся слабым сигналом.</li>
           <li>Обратная связь возможна: например, лекарство могли принять из-за боли, а не наоборот.</li>
         </ul>
       </details>

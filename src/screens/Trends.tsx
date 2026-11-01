@@ -2,6 +2,8 @@ import { useState } from 'preact/hooks';
 import { getDb } from '../db/schema';
 import { listDays, listEventsRange, listItems } from '../db/repo';
 import { DailyChart } from '../components/DailyChart';
+import { LineChart } from '../components/LineChart';
+import { listDailyMetrics } from '../db/courses';
 import { useLive } from '../lib/useLive';
 import { addDays, formatDateRu, formatDuration } from '../lib/dates';
 import {
@@ -20,13 +22,15 @@ export function Trends({ today }: { today: string }) {
   const from = addDays(today, -(period - 1));
 
   const data = useLive(async () => {
-    const [days, events, symptoms, allFlowDays] = await Promise.all([
+    const [days, events, symptoms, allFlowDays, dailyMetrics, measurements] = await Promise.all([
       listDays(db, from, today),
       listEventsRange(db, from, today),
       listItems(db, { kind: 'symptom', includeArchived: true }),
       db.days.filter((d) => (d.flow ?? 0) > 0).toArray(),
+      listDailyMetrics(db),
+      db.measurements.where('date').between(from, today, true, true).toArray(),
     ]);
-    return { days, events, symptoms, allFlow: allFlowDays.map((d) => d.date) };
+    return { days, events, symptoms, allFlow: allFlowDays.map((d) => d.date), dailyMetrics, measurements };
   }, [from, today]);
 
   if (!data) return null;
@@ -129,6 +133,20 @@ export function Trends({ today }: { today: string }) {
           </>
         )}
       </section>
+
+      {data.dailyMetrics.map((m) => {
+        const pts = data.measurements.filter((v) => v.metricId === m.id).map((v) => ({ date: v.date, value: v.value }));
+        return (
+          <section class="panel" key={m.id}>
+            <h2>{m.name}</h2>
+            {pts.length ? (
+              <LineChart label={m.name} unit={m.unit} points={pts} refLow={m.refLow} refHigh={m.refHigh} />
+            ) : (
+              <p class="muted small">За период значений нет.</p>
+            )}
+          </section>
+        );
+      })}
 
       <section class="panel">
         <h2>Цикл</h2>

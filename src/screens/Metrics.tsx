@@ -87,6 +87,7 @@ function MetricForm({ metric, onClose }: { metric?: Metric; onClose: () => void 
   const [unit, setUnit] = useState(metric?.unit ?? '');
   const [low, setLow] = useState(metric?.refLow !== undefined ? num(metric.refLow) : '');
   const [high, setHigh] = useState(metric?.refHigh !== undefined ? num(metric.refHigh) : '');
+  const [daily, setDaily] = useState(metric?.daily ?? false);
 
   const save = async () => {
     const refLow = low.trim() ? parseNumberRu(low) : undefined;
@@ -96,8 +97,11 @@ function MetricForm({ metric, onClose }: { metric?: Metric; onClose: () => void 
       return;
     }
     const ok = await safe(async () => {
-      if (metric) await updateMetric(db, metric.id, { name: name.trim(), unit: unit.trim(), refLow, refHigh });
-      else await addMetric(db, { name, unit, refLow, refHigh });
+      if (metric) await updateMetric(db, metric.id, { name: name.trim(), unit: unit.trim(), refLow, refHigh, daily });
+      else {
+        const m = await addMetric(db, { name, unit, refLow, refHigh });
+        if (daily) await updateMetric(db, m.id, { daily: true });
+      }
       return true;
     });
     if (ok) onClose();
@@ -142,6 +146,10 @@ function MetricForm({ metric, onClose }: { metric?: Metric; onClose: () => void 
           </label>
         </div>
         <p class="muted small">Норма необязательна. Нормы разных лабораторий отличаются — бери с бланка.</p>
+        <label class="check">
+          <input type="checkbox" checked={daily} onChange={(e) => setDaily(e.currentTarget.checked)} />
+          <span>Вводить каждый день на экране «Сегодня»</span>
+        </label>
       </div>
     </Sheet>
   );

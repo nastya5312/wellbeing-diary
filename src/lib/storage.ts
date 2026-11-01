@@ -29,3 +29,21 @@ export function storageErrorMessage(err: unknown): string {
       return 'Не удалось сохранить или прочитать записи. Попробуй ещё раз; если повторяется — сделай экспорт и напиши разработчику.';
   }
 }
+
+/** Удобства одного телефона (свёрнутые группы, выбор в «Повторах») — не данные дневника. Без localStorage не падает. */
+export function loadState<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw === null ? fallback : (JSON.parse(raw) as T);
+  } catch {
+    return fallback;
+  }
+}
+
+export function saveState(key: string, value: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* приватный режим или запрет — просто не запоминаем */
+  }
+}

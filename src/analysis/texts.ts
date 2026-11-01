@@ -1,6 +1,7 @@
 // Формулировки выводов (ТЗ, 7.9). Разрешено: «совпадает», «чаще», «реже», «наблюдается после», «гипотеза».
 // Запрещено: «вызывает», «из-за», «причина», «вам нужно», «рекомендуется» и любые советы по лекарствам.
 import type { Category, Correlation, Signal } from './analyze';
+import { RR_HIGH, RR_LOW } from './thresholds';
 
 export const DISCLAIMER = 'Это совпадения в твоих записях, а не диагноз и не доказанная причина. Обсуждай с врачом.';
 
@@ -43,6 +44,48 @@ export function correlationTitle(c: Correlation): string {
 
 export function correlationDetails(c: Correlation): string {
   return `Коэффициент Спирмена ${c.rho.toFixed(2).replace('.', ',')}, пар дней: ${c.pairs}.`;
+}
+
+const ratio = (a: number, n: number) => `${a} из ${n}`;
+
+/** Предупреждения о совпадающих факторах (ТЗ, 7.7). */
+export function confoundTexts(s: Signal): string[] {
+  const F = `«${s.factorLabel}»`;
+  const out: string[] = [];
+  for (const c of s.confounds) {
+    const G = `«${c.gLabel}»`;
+    out.push(`${F} часто совпадает с ${G} (в ${ratio(c.both, c.fDays)} дней). По этим данным нельзя разделить влияние.`);
+    if (c.inseparable) {
+      out.push(`Разделить невозможно: ${F} всегда встречается вместе с ${G}.`);
+    } else if (!c.strata) {
+      out.push(`Без ${G} ${F} было только ${c.fWithoutG} ${c.fWithoutG === 1 ? 'раз' : c.fWithoutG < 5 ? 'раза' : 'раз'} — для раздельного пересчёта нужно хотя бы 3 дня в каждой группе.`);
+    } else {
+      const { withG: w, withoutG: wo, mh } = c.strata;
+      const part = (name: string, t: typeof w) =>
+        t.c + t.d === 0
+          ? `${name}: ${ratio(t.a, t.a + t.b)} после ${F}, дней без ${F} нет — сравнивать не с чем.`
+          : `${name}: ${ratio(t.a, t.a + t.b)} после ${F} против ${ratio(t.c, t.c + t.d)} без него (RR ${rrText(t.rr)}).`;
+      out.push(`${part(`Отдельно в дни с ${G}`, w)} ${part(`В дни без ${G}`, wo)} С учётом ${G} (Мантель–Хензель): RR ${rrText(mh)}.`);
+      const holds = mh !== null && (s.direction === 'more' ? mh >= RR_HIGH : mh <= RR_LOW);
+      if (!holds) out.push(`После учёта ${G} разница почти исчезает.`);
+    }
+  }
+  return out;
+}
+
+const cases = (n: number) => `${n} ${n % 10 === 1 && n % 100 !== 11 ? 'случая' : 'случаев'}`;
+const pctOf = (a: number, n: number) => (n ? ` (${Math.round((a / n) * 100)}%)` : '');
+
+/** Заголовок «Повторов». */
+export function repeatsTitle(factorLabel: string, occasions: number): string {
+  return `После ${cases(occasions)} «${factorLabel}»`;
+}
+
+/** Строка «Повторов» для одного сдвига. */
+export function repeatsLine(outcomeLabel: string, l: { lag: number; a: number; n: number; c: number; m: number }): string {
+  const when = l.lag === 0 ? 'в тот же день' : l.lag === 1 ? 'на следующий день' : `через ${l.lag} дня`;
+  if (l.n === 0) return `«${outcomeLabel}» ${when}: нет заполненных дней для сравнения.`;
+  return `«${outcomeLabel}» ${when} — в ${l.a} из ${l.n}${pctOf(l.a, l.n)}. В остальные заполненные дни — ${l.c} из ${l.m}${pctOf(l.c, l.m)}.`;
 }
 
 /** Запрещённые слова — проверяются тестом во всех формулировках. */

@@ -115,6 +115,7 @@ function checkMetric(x: unknown): string | null {
   if (!isStr(x.name) || !x.name.trim() || !isStr(x.unit)) return 'показатель без названия';
   if ((x.refLow !== undefined && !isNum(x.refLow)) || (x.refHigh !== undefined && !isNum(x.refHigh))) return `неверная норма у «${x.name}»`;
   if (typeof x.archived !== 'boolean' || !isNum(x.createdAt)) return `неверные поля у «${x.name}»`;
+  if (x.daily !== undefined && typeof x.daily !== 'boolean') return `неверные поля у «${x.name}»`;
   return null;
 }
 

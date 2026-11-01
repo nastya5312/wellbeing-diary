@@ -1,7 +1,7 @@
 // Превращение дневника в ряды по дням: факторы (возможные влияния) и результаты (состояние).
 // Значение на день: true / false / undefined. undefined — «неизвестно»: день не заполнен
 // или нужных данных нет (например, сон не внесён). Такие дни в расчёт не идут (ТЗ, 7.1).
-import type { Course, Day, DiaryEvent, Item, Settings } from '../models/types';
+import type { Course, Day, DiaryEvent, Item, Measurement, Metric, Settings } from '../models/types';
 import { addDays, daysBetween } from '../lib/dates';
 import { dateRange } from '../lib/trends';
 import { cycleStarts } from '../lib/cycle';
@@ -18,6 +18,8 @@ export type BinaryVar = {
   label: string;
   family: FactorFamily | OutcomeFamily;
   values: Value[];
+  /** Из каких позиций состоит фактор (для позиции, тега, курса) — чтобы не сравнивать тег с его же продуктом */
+  members?: string[];
 };
 
 export type NumericVar = { id: string; label: string; family: string; values: (number | undefined)[] };
@@ -28,6 +30,9 @@ export type AnalysisInput = {
   items: Item[];
   courses: Course[];
   settings: Settings;
+  /** Показатели и их значения (вес, пульс…). Необязательны для совместимости. */
+  metrics?: Metric[];
+  measurements?: Pick<Measurement, 'metricId' | 'date' | 'value'>[];
 };
 
 export type Timeline = {
@@ -68,7 +73,7 @@ export function buildTimeline(input: AnalysisInput): Timeline {
   const tags = new Map<string, Set<string>>(); // тег → позиции
   for (const it of items) {
     if (!usedItems.has(it.id) || !FACTOR_KINDS.has(it.kind)) continue;
-    factors.push({ id: `item:${it.id}`, label: it.name, family: 'item', values: onCompleted((i) => eventsByDay[i]!.some((e) => e.itemId === it.id)) });
+    factors.push({ id: `item:${it.id}`, label: it.name, family: 'item', members: [it.id], values: onCompleted((i) => eventsByDay[i]!.some((e) => e.itemId === it.id)) });
     if (it.kind === 'food' || it.kind === 'drink') {
       for (const t of it.tags) tags.set(t, (tags.get(t) ?? new Set()).add(it.id));
     }
@@ -76,7 +81,7 @@ export function buildTimeline(input: AnalysisInput): Timeline {
   for (const [tag, ids] of tags) {
     // Тег из одной позиции ничего не добавляет к самой позиции
     if (ids.size < 2) continue;
-    factors.push({ id: `tag:${tag}`, label: `тег «${tag}»`, family: 'tag', values: onCompleted((i) => eventsByDay[i]!.some((e) => ids.has(e.itemId))) });
+    factors.push({ id: `tag:${tag}`, label: `тег «${tag}»`, family: 'tag', members: [...ids], values: onCompleted((i) => eventsByDay[i]!.some((e) => ids.has(e.itemId))) });
   }
 
   // --- Сон (относится к дате пробуждения) ---
@@ -118,7 +123,7 @@ export function buildTimeline(input: AnalysisInput): Timeline {
   for (const [itemId, list] of coursesBy) {
     const it = itemBy.get(itemId);
     if (!it) continue;
-    factors.push({ id: `course:${itemId}`, label: `период приёма «${it.name}»`, family: 'course', values: onCompleted((i) => courseStatus(list, dates[i]!) === 'active') });
+    factors.push({ id: `course:${itemId}`, label: `период приёма «${it.name}»`, family: 'course', members: [itemId], values: onCompleted((i) => courseStatus(list, dates[i]!) === 'active') });
   }
 
   // --- Результаты ---
@@ -171,6 +176,30 @@ export function buildTimeline(input: AnalysisInput): Timeline {
       label: `сила «${it.name}»`,
       family: 'symptom',
       values: dates.map((_, i) => (completed[i] ? Math.max(0, ...eventsByDay[i]!.filter((e) => e.itemId === id).map((e) => e.intensity ?? 1)) : undefined)),
+    });
+  }
+
+  // Показатели (вес, пульс…): измеренное значение известно и в незаполненный день.
+  // Несколько значений за день — среднее.
+  for (const m of input.metrics ?? []) {
+    if (m.archived) continue;
+    const sums = new Map<number, { s: number; k: number }>();
+    for (const v of input.measurements ?? []) {
+      if (v.metricId !== m.id) continue;
+      const i = index.get(v.date);
+      if (i === undefined) continue;
+      const cur = sums.get(i) ?? { s: 0, k: 0 };
+      sums.set(i, { s: cur.s + v.value, k: cur.k + 1 });
+    }
+    if (!sums.size) continue;
+    numeric.push({
+      id: `n:metric:${m.id}`,
+      label: m.name.toLowerCase(),
+      family: 'metric',
+      values: dates.map((_, i) => {
+        const x = sums.get(i);
+        return x ? x.s / x.k : undefined;
+      }),
     });
   }
 

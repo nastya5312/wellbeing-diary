@@ -203,7 +203,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .grow { flex: 1; }
 .stack { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
 
-input[type='text'], input[type='search'], input[type='number'], input[type='date'], input[type='time'], textarea {
+input[type='text'], input[type='search'], input[type='number'], input[type='date'], input[type='time'], textarea, select {
   width: 100%; min-height: var(--tap);
   padding: 10px 12px;
   border: 1px solid var(--border); border-radius: 10px;
@@ -458,3 +458,24 @@ textarea { resize: vertical; }
 .hidden-row { gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); }
 details summary { cursor: pointer; font-weight: 600; min-height: var(--tap); display: flex; align-items: center; }
 details ul { margin: 8px 0 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 6px; }
+
+/* Предупреждение о совпадающих факторах */
+.confound {
+  border-left: 3px solid var(--warn-text);
+  background: var(--warn-bg);
+  color: var(--warn-text);
+  padding: 8px 10px;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+}
+.confound p { margin: 0; }
+
+/* Повторы */
+.repeats { display: grid; gap: 6px; margin-top: 10px; }
+.repeats p { margin: 0; }
+.repeats-table { width: 100%; border-collapse: collapse; }
+.repeats-table th, .repeats-table td { padding: 6px 4px; border-bottom: 1px solid var(--border); text-align: center; }
+.repeats-table th:first-child, .repeats-table td:first-child { text-align: left; }
+.repeats-table td.yes { font-weight: 700; color: var(--accent); }
+.list-btn.metric-row { flex-direction: row; align-items: center; justify-content: space-between; text-align: left; gap: 12px; }

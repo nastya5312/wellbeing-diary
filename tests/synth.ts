@@ -80,3 +80,46 @@ export function scenarioB(seed: number, length = 120) {
   addNoise(s, 10, 5);
   return { s };
 }
+
+/**
+ * Сценарий C (ТЗ, 13): лекарство M только в дни месячных, головная боль на следующий день после месячных часто.
+ * С самим M головная боль в данных не связана — анализ обязан это показать предупреждением, а не выводом о M.
+ */
+export function scenarioC(seed: number, length = 150) {
+  const s = new Synth(length, seed);
+  addNoise(s);
+  const m = s.item('med', 'M-лекарство');
+  const y = s.item('symptom', 'головная-тест');
+  for (let i = 0; i < length; i++) {
+    if (i % 28 < 5) {
+      s.days[i]!.flow = 2;
+      if (s.random() < 0.8) s.event(i, m);
+    }
+  }
+  for (let i = 1; i < length; i++) {
+    const p = (s.days[i - 1]!.flow ?? 0) > 0 ? 0.6 : 0.1;
+    if (s.random() < p) s.event(i, y, 3);
+  }
+  return { s, m, y };
+}
+
+/**
+ * Фактор F часто вместе с G, но бывает и без него. dependsOn — от чего на деле зависит результат O (на следующий день).
+ */
+export function scenarioCorrelated(seed: number, dependsOn: 'F' | 'G', length = 180) {
+  const s = new Synth(length, seed);
+  addNoise(s, 3, 1);
+  const g = s.item('food', 'G-продукт');
+  const f = s.item('food', 'F-продукт');
+  const o = s.item('symptom', 'O-симптом');
+  for (let i = 0; i < length; i++) {
+    const withG = s.random() < 0.3;
+    if (withG) s.event(i, g);
+    if (s.random() < (withG ? 0.8 : 0.1)) s.event(i, f);
+  }
+  const src = dependsOn === 'F' ? f : g;
+  for (let i = 1; i < length; i++) {
+    if (s.random() < (s.has(i - 1, src) ? 0.7 : 0.08)) s.event(i, o, 3);
+  }
+  return { s, f, g, o };
+}

@@ -8,6 +8,7 @@ import { EveningCheckin } from './EveningCheckin';
 import { NoteSheet } from './NoteSheet';
 import { SwipeRow } from '../components/SwipeRow';
 import { Checklist } from '../components/Checklist';
+import { DailyMetrics } from '../components/DailyMetrics';
 import { useLive } from '../lib/useLive';
 import { safe, notify } from '../lib/notify';
 import { cycleDay } from '../lib/cycle';
@@ -107,6 +108,8 @@ export function Today({ date, today, settings, onOpenBackup, onOpenCatalog, onBa
           tsFor={() => (isToday ? Date.now() : tsFromDiaryDate(date, '12:00', settings.dayStartsAt))}
           items={[...items.values()]} events={events} courses={courses} onEmptyHint={onOpenCatalog} />
       )}
+
+      <DailyMetrics date={date} />
 
       <h2 class="section-title">Добавить</h2>
       <div class="tiles">

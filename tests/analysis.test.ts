@@ -143,6 +143,22 @@ describe('числовые пары (Спирмен)', () => {
     expect(c).toBeDefined();
     expect(c!.rho).toBeGreaterThan(0.35);
   });
+
+  it('ежедневный показатель (вымышленный «пульс») участвует в анализе: связь с коротким сном находится', () => {
+    const s = new Synth(90, 7);
+    const values: { metricId: string; date: string; value: number }[] = [];
+    for (let i = 0; i < 90; i++) {
+      const dur = 300 + Math.floor(s.random() * 240);
+      s.days[i]!.sleep = { durationMin: dur };
+      // чем короче сон, тем выше показатель в тот же день утром (синтетика)
+      values.push({ metricId: 'm1', date: s.days[i]!.date, value: 90 - dur / 10 + s.random() * 6 });
+    }
+    const input = { ...s.input(), metrics: [{ id: 'm1', name: 'Тест-пульс', unit: 'уд/мин', archived: false, createdAt: 0 }], measurements: values };
+    const r = analyze(input);
+    const c = r.correlations.find((x) => x.yId === 'n:metric:m1' || x.xId === 'n:metric:m1');
+    expect(c).toBeDefined();
+    expect(c!.rho).toBeLessThan(-0.35);
+  });
 });
 
 describe('формулировки (7.9)', () => {

@@ -47,3 +47,10 @@ export const MAX_CYCLE_LOOKAHEAD = 45;
  */
 export const REPLICATION_RR = 1.25;
 export const REPLICATION_MIN_A = 2;
+
+/** Совпадающие факторы (7.7): phi, с которого показывается предупреждение */
+export const PHI_CONFOUND = 0.5;
+/** Минимум дней с фактором в каждой страте для пересчёта */
+export const MIN_STRATUM_F_DAYS = 3;
+/** Сколько совпадающих факторов показывать у одного вывода */
+export const MAX_CONFOUNDS = 3;

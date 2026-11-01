@@ -133,3 +133,46 @@ export function parseNumberRu(s: string): number | null {
   if (!/^-?\d+(\.\d+)?$/.test(t)) return null;
   return Number(t);
 }
+
+// ---------- Ежедневные измерения ----------
+
+/** Показатели, закреплённые на экране «Сегодня». */
+export async function listDailyMetrics(db: DiaryDB): Promise<Metric[]> {
+  return (await listMetrics(db)).filter((m) => m.daily);
+}
+
+/** Закрепить показатель на «Сегодня»: найти по названию или создать. */
+export async function enableDailyMetric(db: DiaryDB, name: string, unit: string): Promise<Metric> {
+  return db.transaction('rw', db.metrics, async () => {
+    const found = (await db.metrics.toArray()).find((m) => m.name.trim().toLowerCase() === name.trim().toLowerCase());
+    if (found) {
+      await db.metrics.update(found.id, { daily: true, archived: false });
+      return { ...found, daily: true, archived: false };
+    }
+    const m = await addMetric(db, { name, unit });
+    await db.metrics.update(m.id, { daily: true });
+    return { ...m, daily: true };
+  });
+}
+
+/** Значения показателей за день дневника. */
+export async function listMeasurementsByDate(db: DiaryDB, date: string): Promise<Measurement[]> {
+  return db.measurements.where('date').equals(date).toArray();
+}
+
+/** Одно значение в день: записать (заменив прежние за эту дату) или удалить (value = null). */
+export async function setDailyValue(db: DiaryDB, metricId: string, date: string, value: number | null): Promise<void> {
+  if (!isDateString(date)) throw new Error('Неверная дата');
+  if (value !== null && !Number.isFinite(value)) throw new Error('Значение должно быть числом');
+  await db.transaction('rw', db.metrics, db.measurements, async () => {
+    const same = await db.measurements.where('[metricId+date]').equals([metricId, date]).toArray();
+    if (value === null) {
+      await db.measurements.bulkDelete(same.map((m) => m.id));
+      return;
+    }
+    const [first, ...rest] = same;
+    if (rest.length) await db.measurements.bulkDelete(rest.map((m) => m.id));
+    if (first) await db.measurements.update(first.id, { value, ts: Date.now() });
+    else await addMeasurement(db, { metricId, date, value });
+  });
+}
