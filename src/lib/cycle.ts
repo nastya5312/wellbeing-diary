@@ -29,3 +29,42 @@ export function cycleDay(flowDates: string[], today: string): number | null {
   }
   return null;
 }
+
+export type CycleInfo = {
+  start: string; // первый день месячных
+  periodDays: number; // сколько дней отмечены месячные в этом цикле
+  length: number | null; // дней до следующего начала; null — цикл ещё идёт
+};
+
+/** Начала циклов: день с месячными, перед которым START_GAP_DAYS дней без месячных. */
+export function cycleStarts(flowDates: string[]): string[] {
+  const set = new Set(flowDates);
+  return [...set].sort().filter((d) => {
+    for (let k = 1; k <= START_GAP_DAYS; k++) if (set.has(addDays(d, -k))) return false;
+    return true;
+  });
+}
+
+/** Циклы по порядку: дата начала, длина (до следующего начала) и число дней месячных. */
+export function cycles(flowDates: string[]): CycleInfo[] {
+  const set = new Set(flowDates);
+  const starts = cycleStarts(flowDates);
+  return starts.map((start, i) => {
+    const next = starts[i + 1];
+    let periodDays = 0;
+    for (const d of set) if (d >= start && (!next || d < next)) periodDays++;
+    return { start, periodDays, length: next ? daysBetween(start, next) : null };
+  });
+}
+
+/** Сводка по завершённым циклам: средняя, минимальная и максимальная длина. */
+export function cycleStats(list: CycleInfo[]): { count: number; avg: number; min: number; max: number } | null {
+  const lens = list.map((c) => c.length).filter((l): l is number => l !== null);
+  if (!lens.length) return null;
+  return {
+    count: lens.length,
+    avg: lens.reduce((a, b) => a + b, 0) / lens.length,
+    min: Math.min(...lens),
+    max: Math.max(...lens),
+  };
+}

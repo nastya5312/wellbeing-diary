@@ -30,7 +30,10 @@ function saveCollapsed(s: Set<string>) {
 }
 
 type Props = {
-  today: string;
+  /** Дата дневника, за которую отмечаем */
+  date: string;
+  /** Время новой отметки: сейчас для сегодняшнего дня, полдень для прошлых */
+  tsFor: () => number;
   items: Item[];
   events: DiaryEvent[];
   courses: Course[];
@@ -40,7 +43,7 @@ type Props = {
 // Чек-лист избранного.
 // Касание неотмеченной позиции — отметить (симптом: затем спросить силу). Касание отмеченной — снять.
 // «+1» у отмеченной — ещё одна запись (вторая чашка кофе). Всё отменяется кнопкой в уведомлении.
-export function Checklist({ today, items, events, courses, onEmptyHint }: Props) {
+export function Checklist({ date, tsFor, items, events, courses, onEmptyHint }: Props) {
   const db = getDb();
   const [collapsed, setCollapsed] = useState(loadCollapsed);
   const [askIntensity, setAskIntensity] = useState<{ ev: DiaryEvent; name: string } | null>(null);
@@ -59,10 +62,10 @@ export function Checklist({ today, items, events, courses, onEmptyHint }: Props)
   for (const e of events) todayEvents.set(e.itemId, [...(todayEvents.get(e.itemId) ?? []), e]);
   const coursesBy = new Map<string, Course[]>();
   for (const c of courses) coursesBy.set(c.itemId, [...(coursesBy.get(c.itemId) ?? []), c]);
-  const isPaused = (it: Item) => courseStatus(coursesBy.get(it.id) ?? [], today) === 'paused';
+  const isPaused = (it: Item) => courseStatus(coursesBy.get(it.id) ?? [], date) === 'paused';
 
   const add = async (it: Item) => {
-    const ev = await safe(() => addEvent(db, { itemId: it.id, ts: Date.now(), date: today }));
+    const ev = await safe(() => addEvent(db, { itemId: it.id, ts: tsFor(), date }));
     if (!ev) return;
     if (it.kind === 'symptom') {
       setAskIntensity({ ev, name: it.name });
@@ -87,10 +90,10 @@ export function Checklist({ today, items, events, courses, onEmptyHint }: Props)
       notify('Всё уже отмечено');
       return;
     }
-    const now = Date.now();
+    const now = tsFor();
     const created = await safe(async () => {
       const out: DiaryEvent[] = [];
-      for (const it of todo) out.push(await addEvent(db, { itemId: it.id, ts: now, date: today }));
+      for (const it of todo) out.push(await addEvent(db, { itemId: it.id, ts: now, date }));
       return out;
     });
     if (created) {

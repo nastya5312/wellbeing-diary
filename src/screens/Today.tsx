@@ -13,7 +13,7 @@ import { safe, notify } from '../lib/notify';
 import { cycleDay } from '../lib/cycle';
 import { backupOverdue } from '../lib/backup';
 import { BACKUP_REMIND_DAYS } from '../db/defaults';
-import { addDays, formatDateLong, formatDuration, localTime, weekdayRu } from '../lib/dates';
+import { addDays, formatDateLong, formatDuration, localTime, tsFromDiaryDate, weekdayRu } from '../lib/dates';
 import { ENERGY_LABELS, INTENSITY_LABELS, KIND_ICON, MOOD_LABELS, QUALITY_LABELS, STRESS_LABELS } from '../lib/labels';
 
 type Open =
@@ -30,28 +30,34 @@ const ADD_TILES: { kind: ItemKind; label: string }[] = [
   { kind: 'symptom', label: 'Симптом' },
 ];
 
-export function Today({ today, settings, onOpenBackup, onOpenCatalog }: {
+// Экран дня. Для сегодняшнего дня — с напоминаниями; для прошлых (из календаря) — с кнопкой «Назад».
+export function Today({ date, today, settings, onOpenBackup, onOpenCatalog, onBack }: {
+  /** Просматриваемая дата дневника */
+  date: string;
+  /** Сегодняшняя дата дневника */
   today: string;
   settings: Settings;
-  onOpenBackup: () => void;
+  onOpenBackup?: () => void;
   onOpenCatalog: () => void;
+  onBack?: () => void;
 }) {
+  const isToday = date === today;
   const db = getDb();
   const [open, setOpen] = useState<Open>(null);
 
-  const day = useLive(() => getDay(db, today), [today]);
-  const events = useLive(() => listEventsByDate(db, today), [today]);
+  const day = useLive(() => getDay(db, date), [date]);
+  const events = useLive(() => listEventsByDate(db, date), [date]);
   const items = useLive(async () => new Map((await db.items.toArray()).map((it) => [it.id, it])), []);
-  const cycle = useLive(async () => cycleDay(await listFlowDates(db, addDays(today, -90), today), today), [today]);
-  const yesterday = useLive(() => unfinishedYesterday(db, today), [today]);
+  const cycle = useLive(async () => cycleDay(await listFlowDates(db, addDays(date, -90), date), date), [date]);
+  const yesterday = useLive(() => (isToday ? unfinishedYesterday(db, date) : Promise.resolve(null)), [date, isToday]);
   const hasData = useLive(() => hasAnyData(db), []);
   const courses = useLive(() => db.courses.toArray(), []);
-  const needBackup = hasData !== undefined && backupOverdue(settings.lastExportAt, hasData, BACKUP_REMIND_DAYS);
+  const needBackup = isToday && hasData !== undefined && backupOverdue(settings.lastExportAt, hasData, BACKUP_REMIND_DAYS);
 
   const close = () => setOpen(null);
   const toggleCompleted = async () => {
     const completed = !day?.completed;
-    const ok = await safe(async () => (await saveDay(db, today, { completed }), true));
+    const ok = await safe(async () => (await saveDay(db, date, { completed }), true));
     if (ok) notify(completed ? 'День отмечен заполненным' : 'Отметка снята');
   };
 
@@ -60,15 +66,27 @@ export function Today({ today, settings, onOpenBackup, onOpenCatalog }: {
 
   return (
     <div class="screen">
-      <header class="screen-head">
-        <h1>Сегодня, {formatDateLong(today)}</h1>
+      <header class={`screen-head${onBack ? ' row center' : ''}`}>
+        {onBack && (
+          <button type="button" class="icon-btn" onClick={onBack} aria-label="Назад к календарю">
+            ‹
+          </button>
+        )}
+        <div>
+        <h1>
+          {isToday ? 'Сегодня, ' : ''}
+          {formatDateLong(date)}
+          {!isToday && date.slice(0, 4) !== today.slice(0, 4) ? ` ${date.slice(0, 4)}` : ''}
+        </h1>
         <p class="muted">
-          {weekdayRu(today)}
+          {weekdayRu(date)}
           {cycle ? ` · день цикла ${cycle}` : ''}
+          {!isToday && ' · запись задним числом'}
         </p>
+        </div>
       </header>
 
-      {needBackup && (
+      {needBackup && onOpenBackup && (
         <button type="button" class="banner" onClick={onOpenBackup}>
           {settings.lastExportAt === undefined
             ? 'Резервной копии ещё нет. '
@@ -84,16 +102,19 @@ export function Today({ today, settings, onOpenBackup, onOpenCatalog }: {
       )}
 
       {items && events && courses && (
-        <Checklist today={today} items={[...items.values()]} events={events} courses={courses} onEmptyHint={onOpenCatalog} />
+        <Checklist
+          date={date}
+          tsFor={() => (isToday ? Date.now() : tsFromDiaryDate(date, '12:00', settings.dayStartsAt))}
+          items={[...items.values()]} events={events} courses={courses} onEmptyHint={onOpenCatalog} />
       )}
 
       <h2 class="section-title">Добавить</h2>
       <div class="tiles">
-        <button type="button" class="tile" onClick={() => setOpen({ type: 'sleep', date: today })}>
+        <button type="button" class="tile" onClick={() => setOpen({ type: 'sleep', date: date })}>
           <span class="tile-icon" aria-hidden="true">🌙</span>
           <span>Сон</span>
         </button>
-        <button type="button" class="tile" onClick={() => setOpen({ type: 'evening', date: today })}>
+        <button type="button" class="tile" onClick={() => setOpen({ type: 'evening', date: date })}>
           <span class="tile-icon" aria-hidden="true">🙂</span>
           <span>Самочувствие</span>
         </button>
@@ -103,7 +124,7 @@ export function Today({ today, settings, onOpenBackup, onOpenCatalog }: {
             <span>{t.label}</span>
           </button>
         ))}
-        <button type="button" class="tile" onClick={() => setOpen({ type: 'note', date: today })}>
+        <button type="button" class="tile" onClick={() => setOpen({ type: 'note', date: date })}>
           <span class="tile-icon" aria-hidden="true">✎</span>
           <span>Заметка</span>
         </button>
@@ -115,7 +136,7 @@ export function Today({ today, settings, onOpenBackup, onOpenCatalog }: {
       {(sleep || wb || day?.flow || day?.note) && (
         <section class="cards">
           {sleep && (
-            <button type="button" class="card" onClick={() => setOpen({ type: 'sleep', date: today })}>
+            <button type="button" class="card" onClick={() => setOpen({ type: 'sleep', date: date })}>
               <span class="card-title">🌙 Сон</span>
               <span>
                 {sleep.bedtime}–{sleep.wake}
@@ -128,7 +149,7 @@ export function Today({ today, settings, onOpenBackup, onOpenCatalog }: {
             </button>
           )}
           {(wb || day?.flow) && (
-            <button type="button" class="card" onClick={() => setOpen({ type: 'evening', date: today })}>
+            <button type="button" class="card" onClick={() => setOpen({ type: 'evening', date: date })}>
               <span class="card-title">🙂 Самочувствие</span>
               <span class="small">
                 {[
@@ -143,7 +164,7 @@ export function Today({ today, settings, onOpenBackup, onOpenCatalog }: {
             </button>
           )}
           {day?.note && (
-            <button type="button" class="card" onClick={() => setOpen({ type: 'note', date: today })}>
+            <button type="button" class="card" onClick={() => setOpen({ type: 'note', date: date })}>
               <span class="card-title">✎ Заметка</span>
               <span class="small pre">{day.note}</span>
             </button>
@@ -197,8 +218,8 @@ export function Today({ today, settings, onOpenBackup, onOpenCatalog }: {
         {day?.completed ? '✓ День заполнен (нажми, чтобы снять)' : 'День заполнен'}
       </button>
 
-      {open?.type === 'add' && <QuickAdd settings={settings} date={today} kind={open.kind} onClose={close} />}
-      {open?.type === 'edit' && <QuickAdd settings={settings} date={today} edit={open} onClose={close} />}
+      {open?.type === 'add' && <QuickAdd settings={settings} date={date} kind={open.kind} onClose={close} />}
+      {open?.type === 'edit' && <QuickAdd settings={settings} date={date} edit={open} onClose={close} />}
       {open?.type === 'sleep' && <SleepCheckin date={open.date} onClose={close} />}
       {open?.type === 'evening' && <EveningCheckin date={open.date} onClose={close} />}
       {open?.type === 'note' && <NoteSheet date={open.date} onClose={close} />}

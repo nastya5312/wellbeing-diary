@@ -388,3 +388,55 @@ textarea { resize: vertical; }
 .chart-line { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
 .chart-dot { fill: var(--accent); }
 .chart-text { fill: var(--muted); font-size: 11px; }
+
+/* ---------- Цвета серий (различимы и по пунктиру, не только по цвету) ---------- */
+:root { --c1: #2f6f62; --c2: #b35c00; --c3: #6a4bb3; --c-flow: #c2185b; }
+@media (prefers-color-scheme: dark) { :root { --c1: #6fbfab; --c2: #f0a35e; --c3: #b39ddb; --c-flow: #f48fb1; } }
+.chart-series { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart-series.v1 { stroke: var(--c1); }
+.chart-series.v2 { stroke: var(--c2); stroke-dasharray: 6 3; }
+.chart-series.v3 { stroke: var(--c3); stroke-dasharray: 2 3; }
+.chart-pt.v1, .chart-bar.v1 { fill: var(--c1); }
+.chart-pt.v2, .chart-bar.v2 { fill: var(--c2); }
+.chart-pt.v3, .chart-bar.v3 { fill: var(--c3); }
+.chart-zero { fill: var(--muted); opacity: 0.5; }
+.chart-grid { stroke: var(--border); stroke-width: 1; }
+.chart-flow { fill: var(--c-flow); opacity: 0.13; }
+.daily-chart { margin: 0; }
+.daily-chart svg { width: 100%; height: auto; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 6px; color: var(--muted); }
+.legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.legend-flow { display: inline-block; width: 14px; height: 10px; background: var(--c-flow); opacity: 0.35; border-radius: 2px; }
+.cycle-row { gap: 10px; padding: 4px 2px; border-bottom: 1px solid var(--border); }
+
+/* ---------- Переключатель ---------- */
+.segmented { display: flex; background: var(--surface-2); border-radius: 12px; padding: 3px; }
+.segmented button { flex: 1; min-height: 40px; border: none; border-radius: 10px; background: none; color: var(--text); cursor: pointer; }
+.segmented button.active { background: var(--surface); font-weight: 600; box-shadow: 0 1px 3px rgb(0 0 0 / 0.12); }
+
+/* ---------- Календарь ---------- */
+.month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.month-nav .icon-btn:disabled { opacity: 0.3; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-wd { text-align: center; font-size: 0.8rem; color: var(--muted); padding: 4px 0; }
+.cal-cell {
+  position: relative; aspect-ratio: 1 / 1.1; min-height: var(--tap);
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px;
+  padding: 5px 2px 4px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface); color: var(--text); cursor: pointer;
+}
+.cal-cell.empty { border: none; background: none; cursor: default; }
+.cal-cell:disabled { opacity: 0.35; cursor: default; }
+.cal-cell.today { border: 2px solid var(--accent); }
+.cal-cell.done { background: var(--accent-soft); }
+.cal-cell.flow::after {
+  content: ''; position: absolute; left: 6px; right: 6px; bottom: 3px; height: 3px; border-radius: 2px; background: var(--c-flow);
+}
+.cal-num { font-size: 0.95rem; font-weight: 600; line-height: 1.1; }
+.cal-check { position: absolute; top: 2px; right: 4px; font-size: 0.65rem; color: var(--accent); }
+.cal-dots { display: flex; gap: 3px; margin-top: auto; margin-bottom: 5px; }
+.dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
+.d-symptom { background: var(--c3); }
+.d-med { background: var(--c1); }
+.d-food { background: var(--c2); }
+.cal-legend { margin: 10px 0 4px; }
