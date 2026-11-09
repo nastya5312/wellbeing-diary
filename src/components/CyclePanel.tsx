@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import { getDb } from '../db/schema';
-import { addPeriod } from '../db/repo';
+import { addPeriod, addPeriods } from '../db/repo';
+import { parsePeriodText } from '../lib/periodImport';
 import { buildForecast, METHOD_LABEL, type Forecast } from '../lib/ovulation';
 import { useLive } from '../lib/useLive';
 import { notify, safe } from '../lib/notify';
@@ -25,6 +26,7 @@ const dm = (d: string) => formatDateRu(d).slice(0, 5);
 export function CyclePanel({ today }: { today: string }) {
   const f = useForecast(today);
   const [adding, setAdding] = useState(false);
+  const [importing, setImporting] = useState(false);
   if (!f) return null;
   const recent = f.ovulations.filter((o) => !o.predicted || o.date <= today).slice(-4).reverse();
   const nextOv = f.ovulations.find((o) => o.predicted && o.date >= today);
@@ -81,7 +83,11 @@ export function CyclePanel({ today }: { today: string }) {
       <button type="button" class="btn btn-link" onClick={() => setAdding(true)}>
         <Icon name="plus" size={18} /> Добавить прошлые месячные
       </button>
+      <button type="button" class="btn btn-link" onClick={() => setImporting(true)}>
+        <Icon name="backup" size={18} /> Импорт из другого приложения
+      </button>
       {adding && <AddPeriod onClose={() => setAdding(false)} />}
+      {importing && <ImportPeriods today={today} onClose={() => setImporting(false)} />}
     </section>
   );
 }
@@ -125,6 +131,76 @@ function AddPeriod({ onClose }: { onClose: () => void }) {
         <p class="muted small" style={{ margin: 0 }}>
           Дни отмечаются как «средние» месячные. Если день уже отмечен, он не меняется. Добавляй по одному циклу — чем больше циклов,
           тем точнее прогноз.
+        </p>
+      </div>
+    </Sheet>
+  );
+}
+
+function ImportPeriods({ today, onClose }: { today: string; onClose: () => void }) {
+  const db = getDb();
+  const [text, setText] = useState('');
+  const parsed = text.trim() ? parsePeriodText(text, today) : null;
+  const periods = parsed?.periods ?? [];
+  const odd = periods.filter((p) => p.days <= 2 || p.days >= 9);
+
+  const paste = async () => {
+    try {
+      setText(await navigator.clipboard.readText());
+    } catch {
+      notify('Буфер не читается — вставь текст в поле вручную (нажми и держи → «Вставить»)', 'error');
+    }
+  };
+  const save = async () => {
+    const r = await safe(() => addPeriods(db, periods));
+    if (r) {
+      notify(`Добавлено циклов: ${r.periods}, дней месячных: ${r.days}`);
+      onClose();
+    }
+  };
+
+  return (
+    <Sheet
+      title="Импорт месячных"
+      onClose={onClose}
+      footer={
+        <button type="button" class="btn btn-primary btn-block" disabled={!periods.length} onClick={() => void save()}>
+          {periods.length ? `Добавить циклов: ${periods.length}` : 'Вставь текст'}
+        </button>
+      }
+    >
+      <div class="form" style={{ gap: '14px' }}>
+        <p class="muted small" style={{ margin: 0 }}>
+          Вставь текст из отчёта приложения «Трекер периодов» (раздел «История циклов») или строки вида <code>2031-03-14 5</code> —
+          дата первого дня и сколько дней шли месячные.
+        </p>
+        <button type="button" class="btn btn-block" onClick={() => void paste()}>
+          Вставить из буфера
+        </button>
+        <textarea rows={5} value={text} placeholder={'2031-03-14 5\n2031-02-10 4'} onInput={(e) => setText(e.currentTarget.value)} />
+        {parsed && (
+          <div class="panel small">
+            {periods.length ? (
+              <>
+                <p>
+                  Найдено циклов: <b>{periods.length}</b>, с {formatDateRu(periods[0]!.start)} по {formatDateRu(periods[periods.length - 1]!.start)}.
+                </p>
+                {parsed.checked > 0 && (
+                  <p class={parsed.lengthMismatches ? 'error' : 'muted'}>
+                    Сверка длины циклов с отчётом: {parsed.checked - parsed.lengthMismatches} из {parsed.checked} совпали.
+                  </p>
+                )}
+                {odd.length > 0 && <p class="muted">Необычная длина месячных (1–2 или 9+ дней) у {odd.length} циклов — внесу как есть, проверь по календарю.</p>}
+              </>
+            ) : (
+              <p>Не нашла дат. Нужны строки вида «9 февр. - 8 марта 5 Дней 28 Дней» или «2031-03-14 5».</p>
+            )}
+            {parsed.skipped.length > 0 && <p class="muted">Не поняла строк: {parsed.skipped.length}.</p>}
+          </div>
+        )}
+        <p class="muted small" style={{ margin: 0 }}>
+          Добавляются только месячные (как «средние»). Уже отмеченные дни не меняются, остальные записи не трогаются. Интенсивность по
+          дням и симптомы из чужого отчёта приложение прочитать не может.
         </p>
       </div>
     </Sheet>

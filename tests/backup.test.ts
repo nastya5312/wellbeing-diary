@@ -33,7 +33,7 @@ async function fill() {
     wellbeing: { mood: 3, energy: 2, stress: 4 },
   });
   const c = await startCourse(db, med.id, '2026-09-01');
-  await endCourse(db, c.id, '2026-10-20');
+  await endCourse(db, c.id, '2026-10-21');
   const m = await addMetric(db, { name: 'Показатель-Т', unit: 'ед', refLow: 0.4, refHigh: 4 });
   await addMeasurement(db, { metricId: m.id, date: '2026-10-01', value: 2.5, note: 'вымысел' });
 }

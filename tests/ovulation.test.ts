@@ -17,14 +17,14 @@ describe('прогноз цикла', () => {
     expect(f.nextStart).toEqual({ date: '2026-09-18', from: '2026-09-18', to: '2026-09-18' });
   });
   it('нерегулярные циклы дают диапазон; мало данных — ±3 дня', () => {
-    const f = buildForecast({ flowDates: flowDays(['2026-01-01', '2026-01-27', '2026-02-26', '2026-03-22']), days: [], today: '2026-04-01' });
+    const f = buildForecast({ flowDates: flowDays(['2030-01-01', '2030-01-27', '2030-02-26', '2030-03-22']), days: [], today: '2030-04-01' });
     expect(f.lengths).toEqual([26, 30, 24]);
     expect(f.range).toEqual({ min: 24, max: 30 });
-    expect(f.nextStart!.date).toBe('2026-04-17');
-    expect(f.nextStart!.from).toBe('2026-04-15');
-    expect(f.nextStart!.to).toBe('2026-04-21');
-    const g = buildForecast({ flowDates: flowDays(['2026-01-01', '2026-01-29']), days: [], today: '2026-02-05' });
-    expect(g.nextStart).toEqual({ date: '2026-02-26', from: '2026-02-23', to: '2026-03-01' });
+    expect(f.nextStart!.date).toBe('2030-04-17');
+    expect(f.nextStart!.from).toBe('2030-04-15');
+    expect(f.nextStart!.to).toBe('2030-04-21');
+    const g = buildForecast({ flowDates: flowDays(['2030-01-01', '2030-01-29']), days: [], today: '2030-02-05' });
+    expect(g.nextStart).toEqual({ date: '2030-02-26', from: '2030-02-23', to: '2030-03-01' });
   });
 });
 

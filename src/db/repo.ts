@@ -302,3 +302,23 @@ export async function addPeriod(db: DiaryDB, start: string, length: number, flow
     return added;
   });
 }
+
+/** Внести несколько периодов месячных за одну транзакцию. Дни с уже отмеченными месячными не меняются. */
+export async function addPeriods(db: DiaryDB, periods: { start: string; days: number }[], flow: Flow = 2): Promise<{ periods: number; days: number }> {
+  for (const p of periods) {
+    if (!isDateString(p.start) || !Number.isInteger(p.days) || p.days < 1 || p.days > 14) throw new Error(`Неверный период: ${p.start}, ${p.days} дн.`);
+  }
+  return db.transaction('rw', db.days, async () => {
+    let days = 0;
+    for (const p of periods) {
+      for (let i = 0; i < p.days; i++) {
+        const date = addDays(p.start, i);
+        const prev = await db.days.get(date);
+        if ((prev?.flow ?? 0) > 0) continue;
+        await db.days.put({ completed: false, ...prev, date, flow, updatedAt: Date.now() });
+        days++;
+      }
+    }
+    return { periods: periods.length, days };
+  });
+}

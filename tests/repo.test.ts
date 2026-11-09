@@ -109,8 +109,8 @@ describe('события', () => {
   });
   it('явная дата задним числом', async () => {
     const food = await addItem(db, { kind: 'food', name: 'Тестовое блюдо' });
-    const ev = await addEvent(db, { itemId: food.id, ts: at('2026-11-05T12:00:00'), date: '2026-10-20' });
-    expect(ev.date).toBe('2026-10-20');
+    const ev = await addEvent(db, { itemId: food.id, ts: at('2026-11-05T12:00:00'), date: '2026-10-21' });
+    expect(ev.date).toBe('2026-10-21');
   });
   it('список дня по времени, правка, удаление', async () => {
     const [sym] = await listItems(db, { kind: 'symptom' });
