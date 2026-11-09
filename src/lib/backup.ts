@@ -92,6 +92,7 @@ function checkDay(x: unknown): string | null {
     const st = x.stool;
     if (!isObj(st) || !isNum(st.count) || st.count < 0 || !Number.isInteger(st.count) || !optScale(st.type, 1, 7)) return `неверный стул ${x.date}`;
   }
+  if ((x.ovulation !== undefined && typeof x.ovulation !== 'boolean') || (x.lh !== undefined && x.lh !== 'neg' && x.lh !== 'pos')) return `неверные поля цикла ${x.date}`;
   if (!optScale(x.flow, 0, 3) || !optStr(x.note)) return `неверные поля дня ${x.date}`;
   return null;
 }

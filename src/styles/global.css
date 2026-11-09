@@ -774,3 +774,12 @@ a.btn { text-decoration: none; }
 .exp-list { background: var(--bg); }
 .exp-list .row-btn { background: var(--bg); }
 .exp-row { cursor: default; }
+
+/* Цикл: овуляция и прогноз */
+.cal-ov { position: absolute; top: 3px; right: 4px; color: var(--k-cycle); }
+.cal-ov.est { opacity: 0.55; }
+.cal-cell.pred { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c-flow) 55%, transparent); border-radius: 12px; }
+.legend-pred { display: inline-block; width: 14px; height: 14px; border-radius: 4px; box-shadow: inset 0 0 0 1.5px var(--c-flow); }
+.cycle-title { display: flex; align-items: center; gap: 10px; }
+.cycle-lines { display: grid; gap: 6px; }
+.cycle-lines p { margin: 0; }

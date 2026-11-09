@@ -1,7 +1,7 @@
 // Репозитории: все операции чтения и записи данных дневника.
 // Функции принимают базу первым аргументом — так их можно тестировать на отдельной базе (и для демо-данных).
 import type { DiaryDB } from './schema';
-import type { Day, DiaryEvent, Item, ItemKind, Settings } from '../models/types';
+import type { Day, DiaryEvent, Flow, Item, ItemKind, Settings } from '../models/types';
 import { DEFAULT_SETTINGS } from './defaults';
 import { addDays, diaryDate, isDateString, isTimeString } from '../lib/dates';
 import { isSimilarName, normalizeName } from '../lib/similar';
@@ -283,5 +283,22 @@ export async function importListEntries(
       }
     }
     return { added, updated };
+  });
+}
+
+/** Задним числом внести месячные: с даты start на length дней (не затирает уже отмеченную интенсивность). */
+export async function addPeriod(db: DiaryDB, start: string, length: number, flow: Flow = 2): Promise<number> {
+  if (!isDateString(start)) throw new Error('Неверная дата');
+  if (!Number.isInteger(length) || length < 1 || length > 14) throw new Error('Длина месячных — от 1 до 14 дней');
+  return db.transaction('rw', db.days, async () => {
+    let added = 0;
+    for (let i = 0; i < length; i++) {
+      const date = addDays(start, i);
+      const prev = await db.days.get(date);
+      if ((prev?.flow ?? 0) > 0) continue;
+      await db.days.put({ completed: false, ...prev, date, flow, updatedAt: Date.now() });
+      added++;
+    }
+    return added;
   });
 }

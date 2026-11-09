@@ -6,8 +6,9 @@ import { Today } from './Today';
 import { Trends } from './Trends';
 import { useLive } from '../lib/useLive';
 import { dayCategories, monthGrid } from '../lib/trends';
-import { formatDateLong } from '../lib/dates';
+import { addDays, formatDateLong } from '../lib/dates';
 import { Icon } from '../components/Icon';
+import { CyclePanel, useForecast } from '../components/CyclePanel';
 
 const MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
@@ -61,6 +62,11 @@ function Month({ today, ym, setYm, onPick }: {
   };
   const isFutureMonth = `${ym.y}-${String(ym.m).padStart(2, '0')}` >= today.slice(0, 7);
 
+  const fc = useForecast(today);
+  const ov = new Map((fc?.ovulations ?? []).map((o) => [o.date, o]));
+  const predNext = fc?.nextStart;
+  const inPred = (d: string) => !!predNext && d > today && d >= predNext.from && d <= addDays(predNext.to, 4);
+
   const completedCount = data ? flat.filter((d) => data.days.get(d)?.completed).length : 0;
 
   return (
@@ -94,6 +100,7 @@ function Month({ today, ym, setYm, onPick }: {
             formatDateLong(d),
             day?.completed ? 'заполнен' : '',
             flow ? 'месячные' : '',
+            ov.has(d) ? (ov.get(d)!.predicted || ov.get(d)!.method === 'calendar' ? 'овуляция (оценка)' : 'овуляция') : '',
             cat.symptom ? 'симптомы' : '',
             cat.med ? 'лекарства или добавки' : '',
             cat.food ? 'еда или напитки' : '',
@@ -103,12 +110,17 @@ function Month({ today, ym, setYm, onPick }: {
               type="button"
               key={d}
               role="gridcell"
-              class={`cal-cell${d === today ? ' today' : ''}${day?.completed ? ' done' : ''}${flow ? ' flow' : ''}`}
+              class={`cal-cell${d === today ? ' today' : ''}${day?.completed ? ' done' : ''}${flow ? ' flow' : ''}${inPred(d) ? ' pred' : ''}`}
               disabled={future}
               aria-label={parts.join(', ')}
               onClick={() => onPick(d)}
             >
               <span class="cal-num">{Number(d.slice(8))}</span>
+              {ov.has(d) && (
+                <span class={`cal-ov${ov.get(d)!.method === 'calendar' ? ' est' : ''}`} aria-hidden="true">
+                  <Icon name="sparkle" size={11} />
+                </span>
+              )}
               <span class="cal-dots" aria-hidden="true">
                 {cat.symptom && <i class="dot d-symptom" />}
                 {cat.med && <i class="dot d-med" />}
@@ -124,8 +136,11 @@ function Month({ today, ym, setYm, onPick }: {
         <span class="legend-item"><i class="dot d-med" /> лекарства, добавки</span>
         <span class="legend-item"><i class="dot d-food" /> еда, напитки</span>
         <span class="legend-item"><span class="legend-flow" /> месячные</span>
+        <span class="legend-item"><Icon name="sparkle" size={12} /> овуляция</span>
+        <span class="legend-item"><span class="legend-pred" /> ожидаются месячные</span>
         <span class="legend-item"><span class="legend-done" /> день заполнен</span>
       </div>
+      <CyclePanel today={today} />
       <p class="muted small" style={{ margin: '0 4px' }}>
         Заполнено дней в этом месяце: {completedCount}. Нажми на день, чтобы посмотреть или дописать его.
       </p>

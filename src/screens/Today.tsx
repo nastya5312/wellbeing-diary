@@ -13,6 +13,8 @@ import { Checklist } from '../components/Checklist';
 import { DailyMetrics } from '../components/DailyMetrics';
 import { WhyPanel } from '../components/WhyPanel';
 import { QuickLine } from '../components/QuickLine';
+import { useForecast } from '../components/CyclePanel';
+import { METHOD_LABEL } from '../lib/ovulation';
 import { Icon, IconBadge } from '../components/Icon';
 import { useLive } from '../lib/useLive';
 import { safe, notify } from '../lib/notify';
@@ -85,6 +87,8 @@ export function Today({ date, today, settings, onOpenBackup, onOpenCatalog, onBa
   const [open, setOpen] = useState<Open>(null);
   const [why, setWhy] = useState<{ id: string; ts: number } | null>(null);
   const [line, setLine] = useState(false);
+  const forecast = useForecast(today);
+  const ovToday = forecast?.ovulations.find((o) => o.date === date);
 
   const day = useLive(() => getDay(db, date), [date]);
   const events = useLive(() => listEventsByDate(db, date), [date]);
@@ -173,6 +177,11 @@ export function Today({ date, today, settings, onOpenBackup, onOpenCatalog, onBa
                 <Icon name="drop" size={14} /> День цикла {cycle}
               </span>
             ) : null}
+            {ovToday && (
+              <span class="pill tone-cycle">
+                <Icon name="sparkle" size={14} /> Овуляция ({METHOD_LABEL[ovToday.method]})
+              </span>
+            )}
             {!isToday && <span class="pill">Запись задним числом</span>}
           </div>
         </div>

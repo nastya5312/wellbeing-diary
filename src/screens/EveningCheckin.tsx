@@ -15,6 +15,8 @@ export function EveningCheckin({ date, onClose }: { date: string; onClose: () =>
   const [energy, setEnergy] = useState<number | undefined>();
   const [stress, setStress] = useState<number | undefined>();
   const [flow, setFlow] = useState<number | undefined>();
+  const [lh, setLh] = useState<'neg' | 'pos' | undefined>();
+  const [ovulation, setOvulation] = useState(false);
   const [note, setNote] = useState('');
   const [completed, setCompleted] = useState(false);
 
@@ -24,6 +26,8 @@ export function EveningCheckin({ date, onClose }: { date: string; onClose: () =>
       setEnergy(day?.wellbeing?.energy);
       setStress(day?.wellbeing?.stress);
       setFlow(day?.flow);
+      setLh(day?.lh);
+      setOvulation(day?.ovulation ?? false);
       setNote(day?.note ?? '');
       setCompleted(day?.completed ?? false);
       setLoaded(true);
@@ -35,6 +39,8 @@ export function EveningCheckin({ date, onClose }: { date: string; onClose: () =>
       await saveDay(getDb(), date, {
         wellbeing: { mood: mood as Scale5 | undefined, energy: energy as Scale5 | undefined, stress: stress as Scale5 | undefined },
         flow: flow as Flow | undefined,
+        lh,
+        ovulation: ovulation || undefined,
         note: note.trim() || undefined,
         completed,
       });
@@ -61,6 +67,20 @@ export function EveningCheckin({ date, onClose }: { date: string; onClose: () =>
         <Scale label="Энергия" value={energy} onChange={setEnergy} labels={ENERGY_LABELS} />
         <Scale label="Стресс" value={stress} onChange={setStress} labels={STRESS_LABELS} />
         <Scale label="Месячные" value={flow} onChange={setFlow} labels={FLOW_LABELS} start={0} />
+        <div class="field">
+          <span>Овуляция</span>
+          <div class="chips" role="radiogroup" aria-label="Тест на ЛГ">
+            {([[undefined, 'Тест не делала'], ['neg', 'Тест отрицательный'], ['pos', 'Тест положительный']] as const).map(([v, label]) => (
+              <button type="button" key={label} role="radio" aria-checked={lh === v} class={`chip${lh === v ? ' active' : ''}`} onClick={() => setLh(v)}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <label class="check">
+            <input type="checkbox" checked={ovulation} onChange={(e) => setOvulation(e.currentTarget.checked)} />
+            <span>Овуляция была в этот день<span class="muted small block">по ощущениям, УЗИ или другим данным — это самая надёжная отметка</span></span>
+          </label>
+        </div>
         <label class="field">
           <span>Заметка о дне</span>
           <textarea rows={3} value={note} maxLength={2000} onInput={(e) => setNote(e.currentTarget.value)} />

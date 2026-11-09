@@ -25,6 +25,10 @@ export type Day = {
   wellbeing?: Wellbeing;
   flow?: Flow;
   stool?: Stool;
+  /** Овуляция отмечена вручную в этот день */
+  ovulation?: boolean;
+  /** Тест на ЛГ (овуляционный): отрицательный / положительный */
+  lh?: 'neg' | 'pos';
   note?: string;
   updatedAt: number;
 };
